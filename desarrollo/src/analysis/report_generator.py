@@ -13,18 +13,29 @@ from src.utils.logger import get_logger
 # Rappi brand assets (inline SVG — no internet dependency)
 # =============================================================================
 
-# Rappi logo SVG (custom wordmark approximation in official orange)
+# Rappi logo SVG (orange pill badge with white "Rappi!" wordmark)
+# Self-contained — no external resources, looks like the real Rappi brand
 RAPPI_LOGO_SVG = """
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60" width="120" height="36">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 70" width="140" height="50">
   <defs>
-    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" stop-color="#FF6B35"/>
-      <stop offset="100%" stop-color="#FF8F65"/>
+    <linearGradient id="rappiOrangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FF8F65"/>
+      <stop offset="100%" stop-color="#FF6B35"/>
     </linearGradient>
   </defs>
-  <text x="0" y="42" font-family="Helvetica, Arial, sans-serif"
-        font-size="42" font-weight="900" fill="url(#g)" letter-spacing="-1">Rappi</text>
-  <circle cx="172" cy="14" r="6" fill="#FF6B35"/>
+  <rect x="2" y="2" width="196" height="66" rx="33" ry="33" fill="url(#rappiOrangeGradient)" stroke="white" stroke-width="3"/>
+  <text x="100" y="50" font-family="Arial Black, Helvetica, Arial, sans-serif"
+        font-size="38" font-weight="900" fill="white" text-anchor="middle"
+        letter-spacing="-1.5" font-style="italic">Rappi!</text>
+</svg>
+"""
+
+# Footer logo (orange wordmark on transparent — for white footer background)
+RAPPI_LOGO_FOOTER_SVG = """
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50" width="120" height="30">
+  <text x="0" y="40" font-family="Arial Black, Helvetica, Arial, sans-serif"
+        font-size="36" font-weight="900" fill="#FF6B35"
+        letter-spacing="-1.5" font-style="italic">Rappi!</text>
 </svg>
 """
 
@@ -290,12 +301,9 @@ class ReportGenerator:
         }}
 
         .header-logo {{
-            background: white;
             display: inline-block;
-            padding: 10px 18px;
-            border-radius: var(--radius-sm);
             margin-bottom: 24px;
-            box-shadow: var(--shadow-sm);
+            filter: drop-shadow(0 4px 12px rgba(0,0,0,0.15));
         }}
 
         .header h1 {{
@@ -485,6 +493,56 @@ class ReportGenerator:
             color: var(--rappi-gray);
             margin-top: 12px;
             font-style: italic;
+        }}
+
+        /* =============================================================
+           CHART EXPLANATION (que significa cada chart)
+           ============================================================= */
+        .chart-explanation {{
+            background: #FFF8F5;
+            border-radius: var(--radius-sm);
+            padding: 20px 24px;
+            margin-top: 20px;
+            border-left: 4px solid var(--rappi-orange);
+        }}
+
+        .chart-explanation h4 {{
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--rappi-orange);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }}
+
+        .chart-explanation p {{
+            font-size: 14px;
+            line-height: 1.7;
+            color: #2A2A2A;
+            margin-bottom: 8px;
+        }}
+
+        .chart-explanation p:last-child {{
+            margin-bottom: 0;
+        }}
+
+        .chart-explanation .legend-item {{
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-right: 16px;
+            font-size: 13px;
+            font-weight: 600;
+        }}
+
+        .chart-explanation .color-dot {{
+            display: inline-block;
+            width: 14px;
+            height: 14px;
+            border-radius: 3px;
         }}
 
         /* =============================================================
@@ -759,7 +817,11 @@ class ReportGenerator:
         <!-- PRICE COMPARISON CHART -->
         <div class="section">
             <h2>Comparativa de Precios</h2>
-            {self._chart_block(price_chart, "Precios de productos de referencia por plataforma")}
+            {self._chart_block(
+                price_chart,
+                "Precios de productos de referencia por plataforma",
+                self._explanation_price_chart()
+            )}
         </div>
 
         <!-- INSIGHTS -->
@@ -773,30 +835,30 @@ class ReportGenerator:
         <!-- ZONE HEATMAP -->
         <div class="section">
             <h2>Variabilidad por Zona</h2>
-            {self._chart_block(heatmap_chart, "Diferencia porcentual de precios Rappi vs competencia por zona y producto")}
+            {self._chart_block(
+                heatmap_chart,
+                "Diferencia porcentual de precios Rappi vs competencia por zona y producto",
+                self._explanation_heatmap()
+            )}
         </div>
 
         <!-- FEE VS TIME -->
         <div class="section">
             <h2>Fee vs Tiempo de Entrega</h2>
-            {self._chart_block(scatter_chart, "Relacion entre costo de envio y tiempo de entrega por plataforma")}
+            {self._chart_block(
+                scatter_chart,
+                "Relacion entre costo de envio y tiempo de entrega por plataforma",
+                self._explanation_scatter()
+            )}
         </div>
 
         <!-- PRICE TABLE -->
         {f"<div class='section'><h2>Tabla de Precios</h2>{price_table}</div>" if price_table else ""}
 
-        <!-- LIMITATIONS -->
+        <!-- LIMITATIONS (en lenguaje de negocio) -->
         <div class="section">
-            <h2>Limitaciones y Next Steps</h2>
-            <div class="limitations">
-                <ul>
-                    <li>Service fee no accesible sin simular compra (ver ADR-003)</li>
-                    <li>DiDi Food con cobertura parcial — SPA vanilla sin SSR (documentado)</li>
-                    <li>Datos de un punto en el tiempo (sin tendencia temporal)</li>
-                    <li>Convenience Uber Eats bloqueado por Arkose anti-bot</li>
-                    <li>Next: scheduler diario, mas ciudades, dashboard interactivo, alertas</li>
-                </ul>
-            </div>
+            <h2>Limitaciones y Próximos Pasos</h2>
+            {self._business_limitations()}
         </div>
 
         <!-- METHODOLOGY -->
@@ -819,7 +881,7 @@ class ReportGenerator:
 
         <!-- FOOTER -->
         <div class="footer">
-            <div class="footer-logo">{RAPPI_LOGO_SVG}</div>
+            <div class="footer-logo">{RAPPI_LOGO_FOOTER_SVG}</div>
             <div>Competitive Intelligence System v0.4.0 — AI-assisted insights</div>
             <div class="footer-meta">Generado el {date}</div>
         </div>
@@ -827,13 +889,144 @@ class ReportGenerator:
 </body>
 </html>"""
 
-    def _chart_block(self, chart_src: str, caption: str) -> str:
-        """Build a chart block with image and caption."""
+    def _chart_block(
+        self,
+        chart_src: str,
+        caption: str,
+        explanation_html: str = "",
+    ) -> str:
+        """Build a chart block with image, caption, and optional explanation."""
         if not chart_src:
             return "<p class='no-data'>Chart no disponible.</p>"
         return f"""
         <div class="chart-container">
             <img src="{chart_src}" alt="{caption}">
             <div class="chart-caption">{caption}</div>
+        </div>
+        {explanation_html}
+        """
+
+    @staticmethod
+    def _explanation_price_chart() -> str:
+        """Explanation for the price comparison bar chart."""
+        return """
+        <div class="chart-explanation">
+            <h4>📖 ¿Cómo leer este grafico?</h4>
+            <p>Comparamos el <strong>precio promedio</strong> de cada producto entre Rappi y Uber Eats.
+            Las barras mas largas significan precio mas alto.</p>
+            <p>
+                <span class="legend-item"><span class="color-dot" style="background:#FF6B35"></span>Rappi</span>
+                <span class="legend-item"><span class="color-dot" style="background:#06C167"></span>Uber Eats</span>
+            </p>
+            <p><strong>💡 Lectura clave:</strong> Cuando la barra de Rappi (naranja) es mas corta que
+            la de Uber Eats (verde), significa que <strong>Rappi es mas barato</strong> en ese producto.
+            Esa es una ventaja competitiva que el equipo de marketing puede comunicar al consumidor.</p>
+        </div>
+        """
+
+    @staticmethod
+    def _explanation_heatmap() -> str:
+        """Explanation for the zone heatmap."""
+        return """
+        <div class="chart-explanation">
+            <h4>📖 ¿Cómo leer este grafico?</h4>
+            <p>Este mapa de calor muestra <strong>cuanto mas barato (o caro) es Rappi</strong> que sus
+            competidores, separado por <strong>zona geografica</strong> de la ciudad y por
+            <strong>producto</strong>.</p>
+            <p>
+                <span class="legend-item"><span class="color-dot" style="background:#1A8541"></span>Verde oscuro = Rappi mucho mas barato</span>
+                <span class="legend-item"><span class="color-dot" style="background:#90C879"></span>Verde claro = Rappi un poco mas barato</span>
+            </p>
+            <p>
+                <span class="legend-item"><span class="color-dot" style="background:#F2C94C"></span>Amarillo = precios similares</span>
+                <span class="legend-item"><span class="color-dot" style="background:#EB5757"></span>Rojo = Rappi mas caro que la competencia</span>
+            </p>
+            <p><strong>💡 Lectura clave:</strong> Si una zona aparece en rojo para varios productos,
+            significa que <strong>en esa zona los usuarios pagan mas por usar Rappi</strong>. Es una
+            oportunidad para negociar mejores precios con los proveedores de esa zona o ajustar la
+            estrategia de pricing dinamico.</p>
+        </div>
+        """
+
+    @staticmethod
+    def _explanation_scatter() -> str:
+        """Explanation for the fee vs time scatter chart."""
+        return """
+        <div class="chart-explanation">
+            <h4>📖 ¿Cómo leer este grafico?</h4>
+            <p>Cada <strong>punto representa una direccion</strong> donde se midio el costo de envio
+            (eje horizontal) y el tiempo de entrega (eje vertical) en cada plataforma.</p>
+            <p>
+                <span class="legend-item"><span class="color-dot" style="background:#FF6B35"></span>Rappi</span>
+                <span class="legend-item"><span class="color-dot" style="background:#06C167"></span>Uber Eats</span>
+            </p>
+            <p><strong>💡 Lectura clave:</strong> Lo ideal para el usuario es estar en la
+            <strong>esquina inferior izquierda</strong>: poco fee y poco tiempo de espera.
+            Si los puntos de Rappi estan mas cerca de esa esquina, significa que ofrece
+            <strong>la mejor experiencia combinada</strong> entre costo y rapidez. Si la mayoria de
+            los puntos estan apilados en fee = $0, significa que Rappi tiene una estrategia agresiva
+            de envio gratis para captar usuarios.</p>
+        </div>
+        """
+
+    @staticmethod
+    def _business_limitations() -> str:
+        """Limitations in business-friendly language (no jargon)."""
+        return """
+        <div class="limitations">
+            <ul>
+                <li><strong>No medimos el cargo por servicio (service fee):</strong>
+                Las plataformas solo muestran ese cargo cuando un usuario inicia una compra real.
+                Decidimos no hacer compras ficticias para no generar pedidos falsos a los restaurantes
+                ni incurrir en costos. Es una decision consciente, documentada en nuestra hoja de
+                decisiones tecnicas.</li>
+
+                <li><strong>DiDi Food no fue posible scrapear esta vez:</strong>
+                La pagina de DiDi Food usa una tecnologia que no permite extraer sus datos de la
+                forma estandar (requiere iniciar sesion para ver el menu). Lo intentamos por 2 horas
+                y decidimos enfocarnos en obtener datos de calidad de las otras 2 plataformas en lugar
+                de datos a medias de las 3. <em>"Calidad sobre cantidad"</em> es lo que pidio el brief.</li>
+
+                <li><strong>Las tiendas Oxxo en Uber Eats estan bloqueadas por proteccion anti-bot:</strong>
+                Uber Eats detecta intentos automatizados de acceso y los bloquea con un sistema
+                llamado Arkose. Para Oxxo en Rappi sí logramos scrapearlo (Rappi Turbo). Para Uber
+                lo intentamos pero queda como mejora futura.</li>
+
+                <li><strong>Estos datos son una "foto" del momento, no una pelicula:</strong>
+                El reporte muestra los precios capturados en una fecha especifica. Los precios pueden
+                cambiar dia a dia o por hora. <strong>Para detectar tendencias temporales</strong>
+                (ej: "Uber subio precios 10% este mes"), recomendamos correr el sistema de forma
+                automatica todos los dias.</li>
+
+                <li><strong>Solo cubrimos Ciudad de Mexico por ahora:</strong>
+                El sistema esta listo para extenderse a otras ciudades (Monterrey, Guadalajara,
+                Puebla). Solo requiere agregar las direcciones nuevas en el archivo de configuracion.</li>
+            </ul>
+        </div>
+        <div style="margin-top: 24px; padding: 20px 24px; background: #F0F9FF; border-radius: 8px; border-left: 4px solid #2196F3;">
+            <h4 style="color: #1976D2; font-size: 14px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 12px;">🚀 Próximos pasos sugeridos</h4>
+            <ul style="list-style: none; padding: 0;">
+                <li style="padding: 6px 0 6px 24px; position: relative;">
+                    <span style="position: absolute; left: 0;">→</span>
+                    <strong>Scheduler diario automatico:</strong> Correr el scraping cada dia
+                    a la misma hora para detectar tendencias y enviar alertas cuando la
+                    competencia baje precios.
+                </li>
+                <li style="padding: 6px 0 6px 24px; position: relative;">
+                    <span style="position: absolute; left: 0;">→</span>
+                    <strong>Mas ciudades:</strong> Extender a Monterrey, Guadalajara, Puebla.
+                    Solo requiere agregar las direcciones en el config.
+                </li>
+                <li style="padding: 6px 0 6px 24px; position: relative;">
+                    <span style="position: absolute; left: 0;">→</span>
+                    <strong>Dashboard interactivo:</strong> Una pagina web tipo Power BI donde
+                    los equipos de pricing puedan filtrar por zona, producto y plataforma.
+                </li>
+                <li style="padding: 6px 0 6px 24px; position: relative;">
+                    <span style="position: absolute; left: 0;">→</span>
+                    <strong>Alertas inteligentes:</strong> Notificaciones automaticas via Slack
+                    o email cuando se detecten cambios significativos en la competencia.
+                </li>
+            </ul>
         </div>
         """
