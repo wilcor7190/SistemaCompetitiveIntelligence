@@ -39,9 +39,7 @@ class DataValidator:
         # Validate item prices
         for item in result.items:
             if not (self.PRICE_RANGE[0] <= item.price <= self.PRICE_RANGE[1]):
-                vr.suspect_fields.append(
-                    f"price:{item.original_name}={item.price}"
-                )
+                vr.suspect_fields.append(f"price:{item.original_name}={item.price}")
                 vr.warnings.append(
                     f"Suspect price {item.price} for '{item.original_name}'"
                 )
@@ -49,13 +47,15 @@ class DataValidator:
         # Validate delivery fee
         if result.fees.delivery_fee is not None:
             if not (self.FEE_RANGE[0] <= result.fees.delivery_fee <= self.FEE_RANGE[1]):
-                vr.suspect_fields.append(
-                    f"delivery_fee={result.fees.delivery_fee}"
-                )
+                vr.suspect_fields.append(f"delivery_fee={result.fees.delivery_fee}")
 
         # Validate delivery time
         if result.time_estimate.min_minutes is not None:
-            if not (self.TIME_RANGE[0] <= result.time_estimate.min_minutes <= self.TIME_RANGE[1]):
+            if not (
+                self.TIME_RANGE[0]
+                <= result.time_estimate.min_minutes
+                <= self.TIME_RANGE[1]
+            ):
                 vr.suspect_fields.append(
                     f"delivery_time_min={result.time_estimate.min_minutes}"
                 )
@@ -75,9 +75,7 @@ class DataValidator:
 
         return vr
 
-    def validate_batch(
-        self, results: list[ScrapedResult]
-    ) -> list[ValidationResult]:
+    def validate_batch(self, results: list[ScrapedResult]) -> list[ValidationResult]:
         """Validate a batch of results."""
         return [self.validate_result(r) for r in results]
 

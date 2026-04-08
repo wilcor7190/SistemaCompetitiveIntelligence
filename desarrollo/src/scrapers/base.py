@@ -182,8 +182,7 @@ class BaseScraper(ABC):
         api_data = await self.try_api_interception()
         if api_data:
             self.logger.info(
-                f"[{self.platform.value}][{address.label}] "
-                f"Layer 1 (API) succeeded"
+                f"[{self.platform.value}][{address.label}] Layer 1 (API) succeeded"
             )
             return self._build_result(
                 address, store_type, store_name, api_data, ScrapeLayer.API
@@ -193,8 +192,7 @@ class BaseScraper(ABC):
         dom_data = await self.try_dom_parsing(product_names)
         if dom_data:
             self.logger.info(
-                f"[{self.platform.value}][{address.label}] "
-                f"Layer 2 (DOM) succeeded"
+                f"[{self.platform.value}][{address.label}] Layer 2 (DOM) succeeded"
             )
             return self._build_result(
                 address, store_type, store_name, dom_data, ScrapeLayer.DOM
@@ -207,8 +205,7 @@ class BaseScraper(ABC):
         vision_data = await self.try_vision_fallback(screenshot_path)
         if vision_data:
             self.logger.info(
-                f"[{self.platform.value}][{address.label}] "
-                f"Layer 3 (Vision) succeeded"
+                f"[{self.platform.value}][{address.label}] Layer 3 (Vision) succeeded"
             )
             result = self._build_result(
                 address, store_type, store_name, vision_data, ScrapeLayer.VISION
@@ -251,9 +248,7 @@ class BaseScraper(ABC):
             items=[ScrapedItem(**i) if isinstance(i, dict) else i for i in items],
             fees=FeeInfo(**fees_data) if isinstance(fees_data, dict) else fees_data,
             time_estimate=(
-                TimeEstimate(**time_data)
-                if isinstance(time_data, dict)
-                else time_data
+                TimeEstimate(**time_data) if isinstance(time_data, dict) else time_data
             ),
             rating=data.get("rating"),
             scrape_layer=layer,
@@ -298,26 +293,22 @@ class BaseScraper(ABC):
                 "store_url": str(self.page.url),
             }
         except Exception as e:
-            self.logger.warning(
-                f"[{self.platform.value}] DOM parsing failed: {e}"
-            )
+            self.logger.warning(f"[{self.platform.value}] DOM parsing failed: {e}")
             return None
 
-    async def try_vision_fallback(
-        self, screenshot_path: str | None
-    ) -> dict | None:
-        """Layer 3: Screenshot + OCR with vision LLM."""
+    async def try_vision_fallback(self, screenshot_path: str | None) -> dict | None:
+        """Layer 3: Screenshot + OCR with Claude vision API."""
         if not screenshot_path:
             return None
 
         try:
             from src.scrapers.vision_fallback import VisionFallback
-            from src.utils.ollama_client import OllamaClient
+            from src.utils.claude_client import ClaudeClient
 
-            client = OllamaClient()
-            if not await client.is_available():
+            client = ClaudeClient()
+            if not client.is_available():
                 self.logger.debug(
-                    "[vision] Ollama not available, skipping Layer 3"
+                    "[vision] Claude API not configured, skipping Layer 3"
                 )
                 return None
 
@@ -366,16 +357,12 @@ class BaseScraper(ABC):
         ...
 
     @abstractmethod
-    async def search_store(
-        self, store_type: StoreType, store_name: str | None
-    ) -> bool:
+    async def search_store(self, store_type: StoreType, store_name: str | None) -> bool:
         """Navigate to the specified store."""
         ...
 
     @abstractmethod
-    async def extract_items(
-        self, product_names: list[str]
-    ) -> list[ScrapedItem]:
+    async def extract_items(self, product_names: list[str]) -> list[ScrapedItem]:
         """Extract product prices from the current page."""
         ...
 

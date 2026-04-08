@@ -41,7 +41,9 @@ class DataMerger:
                 "service_fee_mxn": result.fees.service_fee,
                 "delivery_time_min": result.time_estimate.min_minutes,
                 "delivery_time_max": result.time_estimate.max_minutes,
-                "promotions": ";".join(result.fees.promotions) if result.fees.promotions else None,
+                "promotions": ";".join(result.fees.promotions)
+                if result.fees.promotions
+                else None,
                 "rating": result.rating,
                 "scrape_layer": result.scrape_layer.value,
                 "screenshot_path": result.screenshot_path,
@@ -74,15 +76,18 @@ class DataMerger:
 
         # Deduplicate: same (platform, address, store_name, canonical_product)
         if not df.empty and "canonical_product" in df.columns:
-            dedup_cols = ["platform", "address_label", "store_name", "canonical_product"]
+            dedup_cols = [
+                "platform",
+                "address_label",
+                "store_name",
+                "canonical_product",
+            ]
             existing = [c for c in dedup_cols if c in df.columns]
             before = len(df)
             df = df.drop_duplicates(subset=existing, keep="first")
             after = len(df)
             if before != after:
-                self.logger.info(
-                    f"[merger] Deduplicated: {before} -> {after} rows"
-                )
+                self.logger.info(f"[merger] Deduplicated: {before} -> {after} rows")
 
         self.logger.info(f"[merger] DataFrame created: {len(df)} rows")
         return df

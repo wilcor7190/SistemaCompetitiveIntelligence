@@ -1,16 +1,26 @@
-# Competitive Intelligence System
+# Competitive Intelligence System for Delivery Platforms
 
-Sistema de inteligencia competitiva que compara Rappi, Uber Eats y DiDi Food
-en 25 direcciones de CDMX con 6 productos de referencia.
+> Sistema automatizado de inteligencia competitiva que recolecta datos de
+> Rappi, Uber Eats y DiDi Food en Mexico para generar insights accionables.
 
-## Estado actual: MVP 3 — Insights + Reporte
+## Highlights
 
-- ✅ 3 plataformas scrapeadas (Rappi + Uber Eats + DiDi parcial)
-- ✅ 5 insights accionables generados por analisis estadistico
-- ✅ 4 visualizaciones (barras, heatmap, scatter, tabla)
-- ✅ Reporte HTML autocontenido (reports/insights.html)
-- ✅ --report-only para regenerar insights desde datos existentes
-- ✅ 130 tests automatizados
+- **3 plataformas** comparadas (Rappi + Uber Eats verificados, DiDi documentado)
+- **25 direcciones** en 5 zonas de CDMX
+- **6 productos** de referencia (fast food + retail + farmacia)
+- **5 insights** accionables generados por analisis estadistico
+- **4 visualizaciones** (barras, heatmap, scatter, tabla pivot)
+- **3 capas de recoleccion** con fallback automatico (API -> DOM -> Vision)
+- **130 tests** automatizados (100% passing)
+- **Cero costo** de APIs externas (Ollama local opcional)
+
+## Estado actual: MVP 4 — Production Ready (v0.4.0)
+
+- ✅ Pipeline completo: Scraping -> Normalizacion -> Insights -> Reporte HTML
+- ✅ 3 plataformas implementadas (2 funcionales con datos reales, 1 documentada)
+- ✅ Sistema resiliente con backup y fallback
+- ✅ Codigo formateado con ruff, linter clean
+- ✅ Documentacion completa por fase
 
 ## Prerrequisitos
 

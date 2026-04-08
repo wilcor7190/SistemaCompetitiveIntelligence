@@ -14,9 +14,7 @@ class DataNormalizer:
         self.matcher = product_matcher
         self.logger = get_logger()
 
-    def normalize_results(
-        self, results: list[ScrapedResult]
-    ) -> list[ScrapedResult]:
+    def normalize_results(self, results: list[ScrapedResult]) -> list[ScrapedResult]:
         """Normalize all results: match product names to canonical."""
         for result in results:
             if not result.success:
@@ -51,7 +49,12 @@ class DataNormalizer:
         text = text.strip()
 
         if text.lower() in (
-            "gratis", "envio gratis", "envío gratis", "free", "$0", "$0.00"
+            "gratis",
+            "envio gratis",
+            "envío gratis",
+            "free",
+            "$0",
+            "$0.00",
         ):
             return 0.0
 
@@ -98,8 +101,18 @@ class DataNormalizer:
     def parse_promotions(texts: list[str]) -> list[str]:
         """Filter texts that look like promotions."""
         promo_keywords = [
-            "gratis", "free", "off", "descuento", "2x1", "3x2",
-            "promo", "oferta", "ahorra", "especial", "cupón", "cupon",
+            "gratis",
+            "free",
+            "off",
+            "descuento",
+            "2x1",
+            "3x2",
+            "promo",
+            "oferta",
+            "ahorra",
+            "especial",
+            "cupón",
+            "cupon",
         ]
         promotions = []
         for text in texts:

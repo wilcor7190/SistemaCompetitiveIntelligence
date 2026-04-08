@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import matplotlib
+
 matplotlib.use("Agg")  # Non-interactive backend
 import matplotlib.pyplot as plt
 import pandas as pd
@@ -52,7 +53,11 @@ def chart_price_comparison(df: pd.DataFrame, output_path: str) -> str:
     fig, ax = plt.subplots(figsize=(12, 6))
     pivot.plot(kind="bar", ax=ax, color=colors, width=0.7)
 
-    ax.set_title("Precio Promedio por Producto y Plataforma (MXN)", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "Precio Promedio por Producto y Plataforma (MXN)",
+        fontsize=14,
+        fontweight="bold",
+    )
     ax.set_ylabel("Precio (MXN)")
     ax.set_xlabel("")
     ax.legend(labels, title="Plataforma")
@@ -80,12 +85,16 @@ def chart_zone_heatmap(df: pd.DataFrame, output_path: str) -> str:
         logger.warning("[viz] Insufficient data for heatmap")
         return output_path
 
-    rappi = data[data.platform == "rappi"].groupby(
-        ["zone_type", "canonical_product"]
-    ).price_mxn.mean()
-    others = data[data.platform != "rappi"].groupby(
-        ["zone_type", "canonical_product"]
-    ).price_mxn.mean()
+    rappi = (
+        data[data.platform == "rappi"]
+        .groupby(["zone_type", "canonical_product"])
+        .price_mxn.mean()
+    )
+    others = (
+        data[data.platform != "rappi"]
+        .groupby(["zone_type", "canonical_product"])
+        .price_mxn.mean()
+    )
 
     if others.empty:
         # Only Rappi data — show absolute prices instead of delta
@@ -138,7 +147,11 @@ def chart_fee_vs_time(df: pd.DataFrame, output_path: str) -> str:
 
     ax.set_xlabel("Delivery Fee (MXN)")
     ax.set_ylabel("Tiempo de Entrega (min)")
-    ax.set_title("Delivery Fee vs Tiempo de Entrega por Plataforma", fontsize=14, fontweight="bold")
+    ax.set_title(
+        "Delivery Fee vs Tiempo de Entrega por Plataforma",
+        fontsize=14,
+        fontweight="bold",
+    )
     ax.legend(title="Plataforma")
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -195,14 +208,8 @@ def generate_all_charts(
         "price_comparison": chart_price_comparison(
             df, f"{output_dir}/price_comparison.png"
         ),
-        "zone_heatmap": chart_zone_heatmap(
-            df, f"{output_dir}/zone_heatmap.png"
-        ),
-        "fee_vs_time": chart_fee_vs_time(
-            df, f"{output_dir}/fee_vs_time.png"
-        ),
-        "price_table": chart_price_table(
-            df, f"{output_dir}/price_table.html"
-        ),
+        "zone_heatmap": chart_zone_heatmap(df, f"{output_dir}/zone_heatmap.png"),
+        "fee_vs_time": chart_fee_vs_time(df, f"{output_dir}/fee_vs_time.png"),
+        "price_table": chart_price_table(df, f"{output_dir}/price_table.html"),
     }
     return paths
