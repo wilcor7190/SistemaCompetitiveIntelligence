@@ -7,7 +7,7 @@ from collections import deque
 from datetime import datetime
 from pathlib import Path
 
-from src.config import Config, ScraperConfig
+from src.config import Config
 from src.models.schemas import (
     Address,
     Platform,
@@ -23,8 +23,8 @@ from src.scrapers.base import BaseScraper
 from src.scrapers.didi_food import DiDiFoodScraper
 from src.scrapers.rappi import RappiScraper
 from src.scrapers.uber_eats import UberEatsScraper
+from src.utils.claude_client import ClaudeClient
 from src.utils.logger import get_logger
-from src.utils.ollama_client import OllamaClient
 
 
 class ScrapingOrchestrator:
@@ -34,10 +34,7 @@ class ScrapingOrchestrator:
         self.config = config
         self.logger = get_logger()
         self.scraper_config = config.get_scraper_config()
-        self.ollama = OllamaClient(
-            base_url=config.get_ollama_config().base_url,
-            timeout=config.get_ollama_config().timeout,
-        )
+        self.claude = ClaudeClient()
 
     def _create_scraper(self, platform: Platform) -> BaseScraper | None:
         """Factory: create the right scraper for a platform."""
@@ -79,9 +76,7 @@ class ScrapingOrchestrator:
         )
 
         for platform in platforms:
-            results = await self.run_platform(
-                platform, addresses, store_groups
-            )
+            results = await self.run_platform(platform, addresses, store_groups)
             run.results.extend(results)
 
             if save_raw:
@@ -122,8 +117,7 @@ class ScrapingOrchestrator:
             for addr_idx, address in enumerate(addresses):
                 if platform_paused:
                     self.logger.warning(
-                        f"[{platform.value}] CIRCUIT BREAKER: skipping "
-                        f"{address.label}"
+                        f"[{platform.value}] CIRCUIT BREAKER: skipping {address.label}"
                     )
                     continue
 
@@ -202,9 +196,7 @@ class ScrapingOrchestrator:
             "timestamp": ts,
             "results_count": len(results),
             "success_count": sum(1 for r in results if r.success),
-            "results": [
-                r.model_dump(mode="json") for r in results
-            ],
+            "results": [r.model_dump(mode="json") for r in results],
         }
 
         filepath = raw_dir / filename
@@ -220,7 +212,7 @@ class ScrapingOrchestrator:
     ) -> str:
         """Normalize results and merge to CSV."""
         products = self.config.get_products()
-        matcher = ProductMatcher(products, ollama_client=self.ollama)
+        matcher = ProductMatcher(products)
         normalizer = DataNormalizer(product_matcher=matcher)
         validator = DataValidator()
         merger = DataMerger(validator=validator)

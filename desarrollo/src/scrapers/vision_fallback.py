@@ -1,27 +1,22 @@
-"""VisionFallback: Layer 3 — screenshot + OCR with qwen3-vl."""
+"""VisionFallback: Layer 3 — screenshot + OCR with Claude vision."""
 
-import base64
 import json
 import re
-from pathlib import Path
 
+from src.utils.claude_client import ClaudeClient
 from src.utils.logger import get_logger
-from src.utils.ollama_client import OllamaClient
 
-VISION_EXTRACTION_SYSTEM = """Eres un extractor de datos de capturas de pantalla de aplicaciones de delivery de comida en Mexico.
+VISION_SYSTEM = """Eres un extractor de datos de capturas de pantalla de aplicaciones de delivery de comida en Mexico.
 Tu trabajo es leer la imagen y extraer datos estructurados en JSON.
 Responde UNICAMENTE con JSON valido, sin explicaciones ni texto adicional.
 Todos los precios estan en MXN (pesos mexicanos)."""
 
-VISION_EXTRACTION_USER = """Analiza esta captura de pantalla de {platform_name} y extrae los siguientes datos en formato JSON:
+VISION_PROMPT = """Analiza esta captura de pantalla de {platform_name} y extrae los siguientes datos en formato JSON:
 
 {{
   "restaurant_name": "nombre del restaurante",
   "products": [
-    {{
-      "name": "nombre del producto tal como aparece",
-      "price": 0.00
-    }}
+    {{"name": "nombre del producto tal como aparece", "price": 0.00}}
   ],
   "delivery_fee": null,
   "delivery_fee_text": "texto original del fee",
@@ -32,27 +27,24 @@ VISION_EXTRACTION_USER = """Analiza esta captura de pantalla de {platform_name} 
 }}
 
 Reglas:
-- Si un campo no es visible en la imagen, usa null
-- delivery_fee y delivery_time son numeros (float y int respectivamente)
+- Si un campo no es visible, usa null
+- delivery_fee y delivery_time son numeros
 - price siempre es float (ej: 145.00, no "$145")
-- promotions es una lista de strings con el texto exacto de cada promocion visible
-- Si ves varios productos, incluye todos los que puedas leer
-- Busca especificamente estos productos si estan visibles: {product_names}"""
+- promotions es una lista de strings
+- Busca especificamente: {product_names}
+
+Responde SOLO con el JSON, sin markdown ni explicaciones."""
 
 
 class VisionFallback:
-    """Layer 3: Extract data from screenshots using vision LLM."""
+    """Layer 3: Extract data from screenshots using Claude vision API."""
 
     def __init__(
         self,
-        ollama_client: OllamaClient,
-        model: str = "qwen3-vl:8b",
-        confidence_threshold: float = 0.7,
+        claude_client: ClaudeClient | None = None,
         max_retries: int = 2,
     ):
-        self.client = ollama_client
-        self.model = model
-        self.confidence_threshold = confidence_threshold
+        self.client = claude_client or ClaudeClient()
         self.max_retries = max_retries
         self.logger = get_logger()
 
@@ -62,49 +54,38 @@ class VisionFallback:
         platform_name: str = "delivery",
         product_names: list[str] | None = None,
     ) -> dict | None:
-        """Extract structured data from a screenshot.
+        """Extract structured data from a screenshot using Claude vision.
 
         Returns dict with keys: items, fees, time_estimate, store_name, rating.
         """
-        path = Path(image_path)
-        if not path.exists():
-            self.logger.warning(f"[vision] Screenshot not found: {image_path}")
+        if not self.client.is_available():
+            self.logger.debug("[vision] Claude API not available, skipping Layer 3")
             return None
 
-        # Read image as base64
-        image_b64 = base64.b64encode(path.read_bytes()).decode("utf-8")
-        products_str = ", ".join(product_names) if product_names else "cualquier producto"
-
-        prompt = VISION_EXTRACTION_USER.format(
+        products_str = (
+            ", ".join(product_names) if product_names else "cualquier producto"
+        )
+        prompt = VISION_PROMPT.format(
             platform_name=platform_name,
             product_names=products_str,
         )
 
         for attempt in range(self.max_retries + 1):
-            response = await self.client.chat(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": VISION_EXTRACTION_SYSTEM},
-                    {
-                        "role": "user",
-                        "content": prompt,
-                        "images": [image_b64],
-                    },
-                ],
-                format="json",
+            response_text = await self.client.vision(
+                image_path=image_path,
+                prompt=prompt,
+                system=VISION_SYSTEM,
             )
 
-            if not response:
+            if not response_text:
                 self.logger.warning(
-                    f"[vision] No response from {self.model} "
-                    f"(attempt {attempt + 1})"
+                    f"[vision] No response from Claude (attempt {attempt + 1})"
                 )
                 continue
 
-            content = response.get("content", "")
-            parsed = self._clean_and_parse(content)
-
+            parsed = self._clean_and_parse(response_text)
             if parsed and self._validate(parsed):
+                self.logger.info("[vision] Claude extracted data successfully")
                 return self._to_scraper_format(parsed)
 
             self.logger.warning(
@@ -121,14 +102,13 @@ class VisionFallback:
         except json.JSONDecodeError:
             pass
 
-        # Remove markdown fences
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip()
+        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
             pass
 
-        # Find first { and last }
         start = cleaned.find("{")
         end = cleaned.rfind("}")
         if start != -1 and end > start:
@@ -159,13 +139,15 @@ class VisionFallback:
         items = []
         for p in data.get("products", []):
             if p.get("price") and p.get("name"):
-                items.append({
-                    "name": p["name"],
-                    "original_name": p["name"],
-                    "price": float(p["price"]),
-                    "category": None,
-                    "available": True,
-                })
+                items.append(
+                    {
+                        "name": p["name"],
+                        "original_name": p["name"],
+                        "price": float(p["price"]),
+                        "category": None,
+                        "available": True,
+                    }
+                )
 
         fees = {
             "delivery_fee": data.get("delivery_fee"),

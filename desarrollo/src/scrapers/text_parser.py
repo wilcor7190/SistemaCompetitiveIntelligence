@@ -1,17 +1,16 @@
-"""TextParser: Layer 2 fallback — parse raw text with qwen3.5:4b."""
+"""TextParser: Layer 2 fallback — parse raw text with Claude API."""
 
 import json
 import re
 
+from src.utils.claude_client import ClaudeClient
 from src.utils.logger import get_logger
-from src.utils.ollama_client import OllamaClient
 
 TEXT_PARSER_SYSTEM = """Eres un parser de datos de texto crudo extraido de paginas web de delivery de comida en Mexico.
 Recibes texto sin formato (copiado de una pagina web) y debes extraer datos estructurados.
 Responde UNICAMENTE con JSON valido. Todos los precios en MXN."""
 
-TEXT_PARSER_USER = """Extrae datos estructurados del siguiente texto crudo de {platform_name}.
-El texto fue copiado de la pagina de un restaurante de comida:
+TEXT_PARSER_PROMPT = """Extrae datos estructurados del siguiente texto crudo de {platform_name}:
 
 ---
 {raw_text}
@@ -20,12 +19,7 @@ El texto fue copiado de la pagina de un restaurante de comida:
 Responde con este formato JSON:
 {{
   "restaurant_name": "nombre si lo encuentras",
-  "products": [
-    {{
-      "name": "nombre del producto",
-      "price": 0.00
-    }}
-  ],
+  "products": [{{"name": "nombre del producto", "price": 0.00}}],
   "delivery_fee": null,
   "delivery_time_min": null,
   "delivery_time_max": null,
@@ -34,25 +28,22 @@ Responde con este formato JSON:
 }}
 
 Reglas:
-- Busca patrones de precio como "$XX.XX", "MXN XX", numeros cerca de nombres de comida
-- delivery_fee: busca "envio", "delivery", "costo de envio"
-- delivery_time: busca "min", "minutos", numeros con formato "XX-XX min"
-- rating: busca numeros con formato "X.X" cerca de estrellas o "calificacion"
+- Busca patrones de precio como "$XX.XX", "MXN XX"
 - Si no encuentras un campo, usa null
-- Busca especificamente: {product_names}"""
+- Busca especificamente: {product_names}
+
+Responde SOLO con el JSON, sin markdown."""
 
 
 class TextParser:
-    """Layer 2 fallback: parse raw page text using a small LLM."""
+    """Layer 2 fallback: parse raw page text using Claude API."""
 
     def __init__(
         self,
-        ollama_client: OllamaClient,
-        model: str = "qwen3.5:4b",
+        claude_client: ClaudeClient | None = None,
         max_retries: int = 2,
     ):
-        self.client = ollama_client
-        self.model = model
+        self.client = claude_client or ClaudeClient()
         self.max_retries = max_retries
         self.logger = get_logger()
 
@@ -62,18 +53,18 @@ class TextParser:
         platform_name: str = "delivery",
         product_names: list[str] | None = None,
     ) -> dict | None:
-        """Parse raw text into structured data.
-
-        Returns dict with keys: items, fees, time_estimate, store_name, rating.
-        """
+        """Parse raw text into structured data."""
         if not raw_text or len(raw_text.strip()) < 20:
             return None
 
-        # Truncate very long text
-        text = raw_text[:3000]
-        products_str = ", ".join(product_names) if product_names else "cualquier producto"
+        if not self.client.is_available():
+            return self._regex_fallback(raw_text)
 
-        prompt = TEXT_PARSER_USER.format(
+        text = raw_text[:3000]
+        products_str = (
+            ", ".join(product_names) if product_names else "cualquier producto"
+        )
+        prompt = TEXT_PARSER_PROMPT.format(
             platform_name=platform_name,
             raw_text=text,
             product_names=products_str,
@@ -81,38 +72,27 @@ class TextParser:
 
         for attempt in range(self.max_retries + 1):
             response = await self.client.chat(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": TEXT_PARSER_SYSTEM},
-                    {"role": "user", "content": prompt},
-                ],
-                format="json",
+                prompt=prompt, system=TEXT_PARSER_SYSTEM
             )
-
             if not response:
                 continue
 
-            content = response.get("content", "")
-            parsed = self._clean_and_parse(content)
-
+            parsed = self._clean_and_parse(response)
             if parsed:
                 return self._to_scraper_format(parsed)
 
-            self.logger.debug(
-                f"[text_parser] Invalid JSON (attempt {attempt + 1})"
-            )
+            self.logger.debug(f"[text_parser] Invalid JSON (attempt {attempt + 1})")
 
-        # Last resort: regex extraction
         return self._regex_fallback(raw_text)
 
     def _clean_and_parse(self, raw: str) -> dict | None:
-        """Clean and parse LLM response."""
         try:
             return json.loads(raw)
         except json.JSONDecodeError:
             pass
 
         cleaned = re.sub(r"```(?:json)?\s*", "", raw).strip()
+        cleaned = re.sub(r"\s*```\s*$", "", cleaned)
         try:
             return json.loads(cleaned)
         except json.JSONDecodeError:
@@ -125,39 +105,35 @@ class TextParser:
                 return json.loads(cleaned[start : end + 1])
             except json.JSONDecodeError:
                 pass
-
         return None
 
-    def _to_scraper_format(self, data: dict) -> dict:
-        """Convert LLM response to scraper format."""
+    def _to_scraper_format(self, data: dict) -> dict | None:
         items = []
         for p in data.get("products", []):
             if p.get("price") and p.get("name"):
-                items.append({
-                    "name": p["name"],
-                    "original_name": p["name"],
-                    "price": float(p["price"]),
-                    "category": None,
-                    "available": True,
-                })
+                items.append(
+                    {
+                        "name": p["name"],
+                        "original_name": p["name"],
+                        "price": float(p["price"]),
+                        "category": None,
+                        "available": True,
+                    }
+                )
 
         if not items:
             return None
 
-        fees = {
-            "delivery_fee": data.get("delivery_fee"),
-            "promotions": data.get("promotions", []),
-        }
-
-        time_est = {
-            "min_minutes": data.get("delivery_time_min"),
-            "max_minutes": data.get("delivery_time_max"),
-        }
-
         return {
             "items": items,
-            "fees": fees,
-            "time_estimate": time_est,
+            "fees": {
+                "delivery_fee": data.get("delivery_fee"),
+                "promotions": data.get("promotions", []),
+            },
+            "time_estimate": {
+                "min_minutes": data.get("delivery_time_min"),
+                "max_minutes": data.get("delivery_time_max"),
+            },
             "store_name": data.get("restaurant_name"),
             "rating": data.get("rating"),
         }
@@ -170,13 +146,15 @@ class TextParser:
             name = match.group(1).strip()
             price = float(match.group(2))
             if 1 < price < 1000:
-                items.append({
-                    "name": name,
-                    "original_name": name,
-                    "price": price,
-                    "category": None,
-                    "available": True,
-                })
+                items.append(
+                    {
+                        "name": name,
+                        "original_name": name,
+                        "price": price,
+                        "category": None,
+                        "available": True,
+                    }
+                )
 
         if items:
             self.logger.info(

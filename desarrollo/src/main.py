@@ -2,7 +2,6 @@
 
 import argparse
 import asyncio
-import json
 import shutil
 import sys
 import time
@@ -11,8 +10,8 @@ from pathlib import Path
 from src.config import Config
 from src.models.schemas import Platform, StoreType
 from src.scrapers.orchestrator import ScrapingOrchestrator
+from src.utils.claude_client import ClaudeClient
 from src.utils.logger import get_logger, setup_logger
-from src.utils.ollama_client import OllamaClient
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -128,7 +127,8 @@ async def run(args: argparse.Namespace) -> int:
     # Filter store groups — for MVP 1, only restaurant + convenience
     store_groups = config.get_store_groups()
     active_groups = [
-        sg for sg in store_groups
+        sg
+        for sg in store_groups
         if sg.store_type in (StoreType.RESTAURANT, StoreType.CONVENIENCE)
     ]
 
@@ -145,17 +145,14 @@ async def run(args: argparse.Namespace) -> int:
         )
         return 0
 
-    # Check Ollama
-    ollama = OllamaClient(
-        base_url=config.get_ollama_config().base_url,
-        timeout=config.get_ollama_config().timeout,
-    )
-    if await ollama.is_available():
-        models = await ollama.list_models()
-        logger.info(f"Ollama available. Models: {', '.join(models[:5])}")
+    # Check Claude API (optional — system works without it via stats-based insights)
+    claude = ClaudeClient()
+    if claude.is_available():
+        logger.info(f"Claude API available ({claude.model}) — LLM insights enabled")
     else:
-        logger.warning(
-            "Ollama not available. Layers 2-fallback and 3 disabled."
+        logger.info(
+            "Claude API not configured — using stats-based insights. "
+            "Set ANTHROPIC_API_KEY in .env to enable LLM features."
         )
 
     paths = config.get_paths()
@@ -168,6 +165,18 @@ async def run(args: argparse.Namespace) -> int:
             logger.error(f"CSV not found: {csv_path}")
             return 1
         logger.info(f"Report-only mode: using {csv_path}")
+    elif args.use_backup:
+        # Use the most recent backup CSV
+        backup_dir = Path("data/backup")
+        if not backup_dir.exists():
+            logger.error("No backup directory found at data/backup/")
+            return 1
+        backup_csvs = sorted(backup_dir.glob("comparison_backup_*.csv"))
+        if not backup_csvs:
+            logger.error("No backup CSV found in data/backup/")
+            return 1
+        csv_path = str(backup_csvs[-1])
+        logger.info(f"Use-backup mode: loading {csv_path}")
     else:
         # Run orchestrator
         orchestrator = ScrapingOrchestrator(config)
@@ -235,7 +244,7 @@ async def _generate_report(csv_path: str, paths: dict, logger) -> None:
     # Insights
     generator = InsightGenerator()
     insights = await generator.generate_insights(df)
-    executive_summary = generator.generate_executive_summary(df, insights)
+    executive_summary = await generator.generate_executive_summary(df, insights)
     logger.info(f"Insights generated: {len(insights)}")
 
     # HTML Report
