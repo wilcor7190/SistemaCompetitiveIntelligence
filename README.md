@@ -365,6 +365,6 @@ Proyecto de evaluación técnica para Rappi. No distribuir.
 
 **Construido con ❤️ y mucho café para el caso técnico de AI Engineer en Rappi**
 
-*Si tienes preguntas, lee primero [`pruebas/guia-presentacion.md`](pruebas/guia-presentacion.md) — tiene 9 preguntas pre-respondidas.*
+*Si tienes preguntas tecnicas sobre la presentacion del proyecto, lee [`pruebas/guia-presentacion.md`](pruebas/guia-presentacion.md).*
 
 </div>
