@@ -3,11 +3,14 @@
 import argparse
 import asyncio
 import json
+import shutil
 import sys
+import time
+from pathlib import Path
 
 from src.config import Config
 from src.models.schemas import Platform, StoreType
-from src.scrapers.rappi import RappiScraper
+from src.scrapers.orchestrator import ScrapingOrchestrator
 from src.utils.logger import get_logger, setup_logger
 from src.utils.ollama_client import OllamaClient
 
@@ -18,6 +21,7 @@ def build_parser() -> argparse.ArgumentParser:
         description="Competitive Intelligence system for delivery platforms in Mexico",
     )
 
+    # Scraping options
     parser.add_argument(
         "--platforms",
         type=str,
@@ -30,11 +34,20 @@ def build_parser() -> argparse.ArgumentParser:
         default=0,
         help="Limit to N addresses (0 = all)",
     )
+
+    # Mode shortcuts
     parser.add_argument(
         "--debug",
         action="store_true",
         help="Debug mode: 1 platform, 1 address, verbose, headless=false",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Show execution plan without scraping",
+    )
+
+    # Browser options
     parser.add_argument(
         "--headless",
         action=argparse.BooleanOptionalAction,
@@ -45,6 +58,31 @@ def build_parser() -> argparse.ArgumentParser:
         "--screenshots",
         action="store_true",
         help="Capture screenshots on every extraction",
+    )
+
+    # Report options
+    parser.add_argument(
+        "--report-only",
+        action="store_true",
+        help="Skip scraping, generate report from existing data",
+    )
+    parser.add_argument(
+        "--report-data",
+        type=str,
+        default="data/merged/comparison.csv",
+        help="CSV to use with --report-only",
+    )
+
+    # Backup options
+    parser.add_argument(
+        "--save-backup",
+        action="store_true",
+        help="Save a copy of raw data to data/backup/",
+    )
+    parser.add_argument(
+        "--use-backup",
+        action="store_true",
+        help="Use pre-scraped data from data/backup/ instead of scraping",
     )
 
     return parser
@@ -61,7 +99,6 @@ def apply_debug_overrides(args: argparse.Namespace) -> None:
 
 async def run(args: argparse.Namespace) -> int:
     """Main async execution flow."""
-    # Load config
     config = Config.load()
     logger = get_logger()
 
@@ -71,9 +108,9 @@ async def run(args: argparse.Namespace) -> int:
         scraper_config.headless = args.headless
 
     # Filter platforms
-    requested_platforms = [p.strip() for p in args.platforms.split(",")]
+    requested = [p.strip() for p in args.platforms.split(",")]
     platforms = []
-    for p in requested_platforms:
+    for p in requested:
         try:
             platforms.append(Platform(p))
         except ValueError:
@@ -88,26 +125,27 @@ async def run(args: argparse.Namespace) -> int:
     if args.max_addresses > 0:
         addresses = addresses[: args.max_addresses]
 
-    # Get product names for restaurant store group
+    # Filter store groups — for MVP 1, only restaurant + convenience
     store_groups = config.get_store_groups()
-    restaurant_group = next(
-        (sg for sg in store_groups if sg.store_type == StoreType.RESTAURANT),
-        None,
-    )
-    product_names = (
-        [p.canonical_name for p in restaurant_group.products]
-        if restaurant_group
-        else ["Big Mac"]
-    )
-    store_name = restaurant_group.store_name if restaurant_group else "McDonald's"
+    active_groups = [
+        sg for sg in store_groups
+        if sg.store_type in (StoreType.RESTAURANT, StoreType.CONVENIENCE)
+    ]
 
-    logger.info(
-        f"Starting scrape: {len(platforms)} platform(s), "
-        f"{len(addresses)} address(es), "
-        f"{len(product_names)} product(s)"
-    )
+    # Dry run
+    if args.dry_run:
+        products = [p.canonical_name for sg in active_groups for p in sg.products]
+        logger.info(f"Plan: {len(platforms)} platform(s)")
+        logger.info(f"  Addresses: {len(addresses)}")
+        logger.info(f"  Store groups: {len(active_groups)}")
+        logger.info(f"  Products: {products}")
+        logger.info(
+            f"  Estimated data points: "
+            f"~{len(platforms) * len(addresses) * len(products)}"
+        )
+        return 0
 
-    # Check Ollama availability
+    # Check Ollama
     ollama = OllamaClient(
         base_url=config.get_ollama_config().base_url,
         timeout=config.get_ollama_config().timeout,
@@ -120,78 +158,54 @@ async def run(args: argparse.Namespace) -> int:
             "Ollama not available. Layers 2-fallback and 3 disabled."
         )
 
-    # Run scrapers
-    all_results = []
+    # Run orchestrator
+    orchestrator = ScrapingOrchestrator(config)
 
-    for platform in platforms:
-        if platform == Platform.RAPPI:
-            scraper = RappiScraper(scraper_config)
-        else:
-            logger.warning(
-                f"{platform.value} not implemented in MVP 0, skipping"
-            )
-            continue
+    run_result = await orchestrator.run_all(
+        platforms=platforms,
+        addresses=addresses,
+        store_groups=active_groups,
+    )
 
-        try:
-            await scraper.setup()
+    # Normalize and merge to CSV
+    if run_result.results:
+        paths = config.get_paths()
+        csv_path = await orchestrator.normalize_and_merge(
+            run_result, output_dir=paths["merged_data"]
+        )
+        logger.info(f"CSV saved: {csv_path}")
 
-            for addr in addresses:
-                result = await scraper.scrape_address(
-                    address=addr,
-                    store_type=StoreType.RESTAURANT,
-                    store_name=store_name,
-                    product_names=product_names,
-                )
-                all_results.append(result)
+        # Save backup if requested
+        if args.save_backup:
+            backup_dir = Path("data/backup")
+            backup_dir.mkdir(parents=True, exist_ok=True)
+            ts = time.strftime("%Y%m%d_%H%M%S")
 
-                # Print result summary
-                if result.success:
-                    logger.info(
-                        f"[bold green]SUCCESS[/bold green] "
-                        f"{result.platform.value} | {addr.label} | "
-                        f"{len(result.items)} items | "
-                        f"layer={result.scrape_layer.value}",
-                    )
-                else:
-                    logger.warning(
-                        f"FAILED {result.platform.value} | {addr.label} | "
-                        f"{result.error_message}"
-                    )
+            # Copy raw JSONs
+            raw_dir = Path(paths["raw_data"])
+            for f in raw_dir.glob("*.json"):
+                shutil.copy2(f, backup_dir / f"backup_{ts}_{f.name}")
 
-                if len(addresses) > 1:
-                    await scraper.rate_limit_delay()
-
-        finally:
-            await scraper.teardown()
+            # Copy CSV
+            shutil.copy2(csv_path, backup_dir / f"comparison_backup_{ts}.csv")
+            logger.info(f"Backup saved to {backup_dir}")
 
     # Print summary
-    success_count = sum(1 for r in all_results if r.success)
-    total = len(all_results)
-    logger.info(f"Scraping complete: {success_count}/{total} successful")
+    success = sum(1 for r in run_result.results if r.success)
+    total = len(run_result.results)
+    logger.info(
+        f"Done: {success}/{total} successful ({run_result.success_rate:.0%}) | "
+        f"Layers: {run_result.layer_distribution}"
+    )
 
-    # Print results as JSON
-    if all_results:
-        print("\n--- Results JSON ---")
-        for r in all_results:
-            print(
-                json.dumps(
-                    r.model_dump(mode="json"),
-                    indent=2,
-                    ensure_ascii=False,
-                    default=str,
-                )
-            )
-
-    return 0 if success_count > 0 else 3
+    return 0 if success > 0 else 3
 
 
 def main() -> None:
     parser = build_parser()
     args = parser.parse_args()
-
     apply_debug_overrides(args)
 
-    # Setup logger
     log_level = "DEBUG" if args.debug else "INFO"
     setup_logger(level=log_level)
 

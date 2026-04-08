@@ -79,49 +79,89 @@ class RappiScraper(BaseScraper):
     # ------------------------------------------------------------------
 
     async def set_address(self, address: Address) -> bool:
-        """For MVP 0: navigate directly to store URL (skip address input)."""
-        # MVP 0 uses direct store URLs, no address configuration needed
-        self.logger.debug(
-            f"[rappi][{address.label}] Using direct URL navigation"
-        )
-        return True
+        """Set geolocation to simulate the delivery address."""
+        try:
+            context = self.page.context
+            await context.set_geolocation(
+                {"latitude": address.lat, "longitude": address.lng}
+            )
+            await context.grant_permissions(["geolocation"])
+            self.logger.debug(
+                f"[rappi][{address.label}] Geolocation set"
+            )
+            return True
+        except Exception as e:
+            self.logger.debug(f"[rappi] Geolocation failed: {e}")
+            return True  # Non-fatal, continue with direct URLs
 
     async def search_store(
         self, store_type: StoreType, store_name: str | None
     ) -> bool:
-        """Navigate to the store page.
-
-        MVP 0: Direct URL navigation to McDonald's with known store IDs.
-        """
+        """Navigate to the store page by type."""
         if store_type == StoreType.RESTAURANT:
             return await self._navigate_to_restaurant(store_name)
-        # Convenience and pharmacy stubs for MVP 0
-        self.logger.warning(
-            f"[rappi] Store type {store_type.value} not implemented in MVP 0"
-        )
+        elif store_type == StoreType.CONVENIENCE:
+            return await self._navigate_to_convenience(store_name)
+        elif store_type == StoreType.PHARMACY:
+            return await self._navigate_to_pharmacy(store_name)
         return False
 
     async def _navigate_to_restaurant(self, name: str | None) -> bool:
         """Navigate to a restaurant by direct URL."""
         store_id = MCDONALDS_STORE_IDS[0]
         url = f"{self.BASE_URL}/restaurantes/{store_id}-mcdonalds"
-        self._current_store_id = store_id
+        return await self._goto_store(url, store_id)
 
+    async def _navigate_to_convenience(self, name: str | None) -> bool:
+        """Navigate to Rappi Turbo store with product search.
+
+        Turbo uses a different DOM than restaurants (Styled Components
+        with data-testid='typography' instead of Chakra UI h4).
+        We navigate directly to the Turbo store search URL.
+        """
+        # Turbo store ID discovered via inspection
+        turbo_id = "1923301762-turbo-ciudad-de-mexico"
+        url = f"{self.BASE_URL}/tiendas/{turbo_id}/s?term=coca+cola"
+
+        self.logger.info(f"[rappi] Navigating to Turbo: {url}")
+        return await self._goto_store(url, "turbo")
+
+    async def _navigate_to_pharmacy(self, name: str | None) -> bool:
+        """Navigate to pharmacy. MVP 1: best-effort, not critical."""
+        url = f"{self.BASE_URL}/farmacia"
+        self.logger.info(f"[rappi] Trying Rappi Farmacia: {url}")
+
+        try:
+            await self.page.goto(url, wait_until="domcontentloaded")
+            await self.page.wait_for_load_state("networkidle")
+            await self.page.wait_for_timeout(2000)
+
+            has_products = await self.page.evaluate(
+                "!!document.querySelector('h4.chakra-text')"
+            )
+            if has_products:
+                self._current_store_id = "farmacia"
+                return True
+        except Exception as e:
+            self.logger.debug(f"[rappi] Pharmacy failed: {e}")
+
+        self.logger.warning("[rappi] Pharmacy not available, skipping")
+        return False
+
+    async def _goto_store(self, url: str, store_id: str) -> bool:
+        """Navigate to a store URL with API interception."""
+        self._current_store_id = store_id
         self.logger.info(f"[rappi] Navigating to {url}")
 
         try:
-            # Set up API interception before navigation
             self._intercepted_data.clear()
             self.page.on("response", self._on_response)
 
             await self.page.goto(url, wait_until="domcontentloaded")
-            # Wait for content to render
             await self.page.wait_for_load_state("networkidle")
             await self.page.wait_for_timeout(2000)
 
-            self.logger.info(
-                f"[rappi] Page loaded: {self.page.url}"
-            )
+            self.logger.info(f"[rappi] Page loaded: {self.page.url}")
             return True
         except PlaywrightTimeout:
             self.logger.warning(f"[rappi] Timeout navigating to {url}")
@@ -152,43 +192,45 @@ class RappiScraper(BaseScraper):
     ) -> list[ScrapedItem]:
         """Extract product items from the DOM.
 
-        Rappi uses Chakra UI: product cards are div.chakra-stack with
-        h4.chakra-text for name and spans containing '$ NNN.00' for price.
+        Handles two layouts:
+        - Restaurant (Chakra UI): h4.chakra-text titles + $ price in parent
+        - Turbo/Stores (Styled Components): body text with product names
+          followed by '$ NN.00' in span[data-testid='typography']
         """
-        items: list[ScrapedItem] = []
-
-        try:
-            # Wait for h4 product titles to appear
-            await self.page.wait_for_selector(
-                "h4.chakra-text",
-                timeout=self.config.selector_timeout,
-            )
-        except PlaywrightTimeout:
-            self.logger.warning("[rappi] No product titles found in DOM")
+        # Try restaurant layout first
+        items = await self._extract_items_restaurant(product_names)
+        if items:
             return items
 
-        # Extract product data using JS for reliability
+        # Fallback: Turbo/store layout
+        items = await self._extract_items_turbo(product_names)
+        return items
+
+    async def _extract_items_restaurant(
+        self, product_names: list[str]
+    ) -> list[ScrapedItem]:
+        """Extract from restaurant layout (Chakra UI h4 cards)."""
+        try:
+            await self.page.wait_for_selector(
+                "h4.chakra-text", timeout=self.config.selector_timeout,
+            )
+        except PlaywrightTimeout:
+            return []
+
         raw_products = await self.page.evaluate("""() => {
             const h4s = document.querySelectorAll('h4.chakra-text');
             const results = [];
             for (const h4 of h4s) {
-                // Walk up to find the card container with price
                 let card = h4.parentElement;
                 for (let i = 0; i < 4 && card; i++) {
                     const text = card.innerText || '';
                     if (text.includes('$')) {
-                        // Extract all prices from card text
                         const priceMatches = text.match(/\\$\\s*[\\d,.]+/g);
                         if (priceMatches && priceMatches.length > 0) {
-                            // First price is the current/discounted price
                             const priceStr = priceMatches[0].replace(/[^\\d.,]/g, '').replace(',', '.');
                             results.push({
                                 name: h4.textContent.trim(),
                                 price: parseFloat(priceStr),
-                                originalPrice: priceMatches.length > 1
-                                    ? parseFloat(priceMatches[1].replace(/[^\\d.,]/g, '').replace(',', '.'))
-                                    : null,
-                                hasDiscount: text.includes('%'),
                             });
                         }
                         break;
@@ -199,22 +241,82 @@ class RappiScraper(BaseScraper):
             return results;
         }""")
 
-        self.logger.info(f"[rappi] Found {len(raw_products)} products in DOM")
+        self.logger.info(f"[rappi] Found {len(raw_products)} products (restaurant)")
+        return self._match_items(raw_products, product_names, "fast_food")
 
-        lowercase_targets = [n.lower() for n in product_names]
+    async def _extract_items_turbo(
+        self, product_names: list[str]
+    ) -> list[ScrapedItem]:
+        """Extract from Turbo/store layout (body text parsing).
+
+        Turbo products appear as text blocks:
+        'Agregar\\n0\\n$ 19.00\\n(0.0317/ml)\\nCoca-Cola Original Refresco 600 mL'
+        """
+        try:
+            await self.page.wait_for_selector(
+                "span[data-testid='typography']",
+                timeout=self.config.selector_timeout,
+            )
+        except PlaywrightTimeout:
+            self.logger.warning("[rappi] No Turbo products found in DOM")
+            return []
+
+        raw_products = await self.page.evaluate(r"""() => {
+            const body = document.body.innerText || '';
+            const results = [];
+            // Split by 'Agregar' which separates product cards
+            const blocks = body.split('Agregar');
+            for (const block of blocks) {
+                // Find price: '$ NN.NN'
+                const priceMatch = block.match(/\$\s*([\d,.]+)/);
+                if (!priceMatch) continue;
+                const price = parseFloat(priceMatch[1].replace(',', '.'));
+                if (price < 1 || price > 5000) continue;
+
+                // Find product name: longest line that's not price/metadata
+                const lines = block.split('\n').map(l => l.trim()).filter(l => l.length > 5);
+                let name = null;
+                for (const line of lines) {
+                    // Skip price lines, unit lines, metadata
+                    if (line.startsWith('$') || line.startsWith('(') || line === '0'
+                        || line.startsWith('Sin az') || line === 'Pack'
+                        || line.match(/^\d+\s*[xX]\s*\d/)) continue;
+                    // Take the first meaningful line as product name
+                    if (line.length > 10 && !name) {
+                        name = line;
+                    }
+                }
+                if (name && price) {
+                    results.push({name, price});
+                }
+            }
+            return results;
+        }""")
+
+        self.logger.info(f"[rappi] Found {len(raw_products)} products (turbo)")
+        return self._match_items(raw_products, product_names, "retail")
+
+    def _match_items(
+        self,
+        raw_products: list[dict],
+        product_names: list[str],
+        category: str,
+    ) -> list[ScrapedItem]:
+        """Match raw products against target names."""
+        items: list[ScrapedItem] = []
+        # Normalize targets: lowercase, no hyphens
+        norm_targets = [n.lower().replace("-", " ") for n in product_names]
 
         for prod in raw_products:
             original_name = prod["name"]
             price = prod["price"]
-
             if not price or price <= 0:
                 continue
 
-            # Match against target product names
-            name_lower = original_name.lower()
+            name_norm = original_name.lower().replace("-", " ")
             matched_canonical = None
-            for i, target in enumerate(lowercase_targets):
-                if target in name_lower or name_lower in target:
+            for i, target in enumerate(norm_targets):
+                if target in name_norm or name_norm in target:
                     matched_canonical = product_names[i]
                     break
 
@@ -223,7 +325,7 @@ class RappiScraper(BaseScraper):
                     name=matched_canonical or original_name,
                     original_name=original_name,
                     price=price,
-                    category="fast_food",
+                    category=category,
                     available=True,
                 )
             )

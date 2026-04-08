@@ -306,8 +306,29 @@ class BaseScraper(ABC):
     async def try_vision_fallback(
         self, screenshot_path: str | None
     ) -> dict | None:
-        """Layer 3: Screenshot + OCR. Stub in MVP 0, implemented in MVP 1."""
-        return None
+        """Layer 3: Screenshot + OCR with vision LLM."""
+        if not screenshot_path:
+            return None
+
+        try:
+            from src.scrapers.vision_fallback import VisionFallback
+            from src.utils.ollama_client import OllamaClient
+
+            client = OllamaClient()
+            if not await client.is_available():
+                self.logger.debug(
+                    "[vision] Ollama not available, skipping Layer 3"
+                )
+                return None
+
+            vision = VisionFallback(client)
+            return await vision.extract_from_screenshot(
+                screenshot_path,
+                platform_name=self.platform.value,
+            )
+        except Exception as e:
+            self.logger.debug(f"[vision] Layer 3 failed: {e}")
+            return None
 
     # ------------------------------------------------------------------
     # Utilities
