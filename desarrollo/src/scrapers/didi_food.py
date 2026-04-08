@@ -92,16 +92,14 @@ class DiDiFoodScraper(BaseScraper):
             await self.page.reload()
             await self.page.wait_for_timeout(3000)
 
-            self.logger.info(f"[didi_food] Address set via localStorage")
+            self.logger.info("[didi_food] Address set via localStorage")
             return True
 
         except Exception as e:
             self.logger.warning(f"[didi_food] Failed to set address: {e}")
             return False
 
-    async def search_store(
-        self, store_type: StoreType, store_name: str | None
-    ) -> bool:
+    async def search_store(self, store_type: StoreType, store_name: str | None) -> bool:
         """Search for a store on DiDi Food."""
         if store_type not in (StoreType.RESTAURANT, StoreType.CONVENIENCE):
             return False
@@ -131,7 +129,9 @@ class DiDiFoodScraper(BaseScraper):
             if store_link:
                 href = await store_link.get_attribute("href")
                 if href:
-                    full_url = href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    full_url = (
+                        href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    )
                     self.logger.info(f"[didi_food] Found store: {full_url}")
                     await self.page.goto(full_url, wait_until="domcontentloaded")
                     await self.page.wait_for_timeout(5000)
@@ -186,9 +186,7 @@ class DiDiFoodScraper(BaseScraper):
     # Extraction
     # ------------------------------------------------------------------
 
-    async def extract_items(
-        self, product_names: list[str]
-    ) -> list[ScrapedItem]:
+    async def extract_items(self, product_names: list[str]) -> list[ScrapedItem]:
         """Extract products from DiDi Food DOM via body text parsing."""
         items: list[ScrapedItem] = []
 
@@ -258,9 +256,7 @@ class DiDiFoodScraper(BaseScraper):
         """Extract delivery fee from DiDi Food."""
         try:
             body = await self.page.evaluate("() => document.body.innerText || ''")
-            fee_match = re.search(
-                r"[Ee]nv[ií]o[:\s]*\$?\s*([\d,.]+)", body
-            )
+            fee_match = re.search(r"[Ee]nv[ií]o[:\s]*\$?\s*([\d,.]+)", body)
             if fee_match:
                 return FeeInfo(
                     delivery_fee=float(fee_match.group(1).replace(",", ".")),
@@ -288,7 +284,8 @@ class DiDiFoodScraper(BaseScraper):
             if single_match:
                 val = int(single_match.group(1))
                 return TimeEstimate(
-                    min_minutes=val, max_minutes=val,
+                    min_minutes=val,
+                    max_minutes=val,
                     original_text=single_match.group(0),
                 )
         except Exception as e:

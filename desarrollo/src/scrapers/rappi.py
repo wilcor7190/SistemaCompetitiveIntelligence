@@ -86,17 +86,13 @@ class RappiScraper(BaseScraper):
                 {"latitude": address.lat, "longitude": address.lng}
             )
             await context.grant_permissions(["geolocation"])
-            self.logger.debug(
-                f"[rappi][{address.label}] Geolocation set"
-            )
+            self.logger.debug(f"[rappi][{address.label}] Geolocation set")
             return True
         except Exception as e:
             self.logger.debug(f"[rappi] Geolocation failed: {e}")
             return True  # Non-fatal, continue with direct URLs
 
-    async def search_store(
-        self, store_type: StoreType, store_name: str | None
-    ) -> bool:
+    async def search_store(self, store_type: StoreType, store_name: str | None) -> bool:
         """Navigate to the store page by type."""
         if store_type == StoreType.RESTAURANT:
             return await self._navigate_to_restaurant(store_name)
@@ -187,9 +183,7 @@ class RappiScraper(BaseScraper):
     # Extraction — Layer 2 (DOM)
     # ------------------------------------------------------------------
 
-    async def extract_items(
-        self, product_names: list[str]
-    ) -> list[ScrapedItem]:
+    async def extract_items(self, product_names: list[str]) -> list[ScrapedItem]:
         """Extract product items from the DOM.
 
         Handles two layouts:
@@ -212,7 +206,8 @@ class RappiScraper(BaseScraper):
         """Extract from restaurant layout (Chakra UI h4 cards)."""
         try:
             await self.page.wait_for_selector(
-                "h4.chakra-text", timeout=self.config.selector_timeout,
+                "h4.chakra-text",
+                timeout=self.config.selector_timeout,
             )
         except PlaywrightTimeout:
             return []
@@ -244,9 +239,7 @@ class RappiScraper(BaseScraper):
         self.logger.info(f"[rappi] Found {len(raw_products)} products (restaurant)")
         return self._match_items(raw_products, product_names, "fast_food")
 
-    async def _extract_items_turbo(
-        self, product_names: list[str]
-    ) -> list[ScrapedItem]:
+    async def _extract_items_turbo(self, product_names: list[str]) -> list[ScrapedItem]:
         """Extract from Turbo/store layout (body text parsing).
 
         Turbo products appear as text blocks:
@@ -363,7 +356,10 @@ class RappiScraper(BaseScraper):
                         # Next line(s) contain the fee value
                         for j in range(i + 1, min(i + 3, len(lines))):
                             next_line = lines[j].strip()
-                            if "gratis" in next_line.lower() or "free" in next_line.lower():
+                            if (
+                                "gratis" in next_line.lower()
+                                or "free" in next_line.lower()
+                            ):
                                 delivery_fee = 0.0
                                 delivery_fee_original = next_line
                                 break

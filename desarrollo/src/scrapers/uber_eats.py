@@ -81,9 +81,7 @@ class UberEatsScraper(BaseScraper):
             self.logger.debug(f"[uber_eats] Geolocation failed: {e}")
             return True
 
-    async def search_store(
-        self, store_type: StoreType, store_name: str | None
-    ) -> bool:
+    async def search_store(self, store_type: StoreType, store_name: str | None) -> bool:
         """Navigate to a store on Uber Eats."""
         if store_type == StoreType.RESTAURANT:
             return await self._navigate_to_restaurant(store_name)
@@ -118,7 +116,9 @@ class UberEatsScraper(BaseScraper):
             if store_link:
                 href = await store_link.get_attribute("href")
                 if href:
-                    store_url = href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    store_url = (
+                        href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    )
                     self.logger.info(f"[uber_eats] Found store: {store_url}")
                     await self.page.goto(store_url, wait_until="domcontentloaded")
                     await self.page.wait_for_timeout(3000)
@@ -149,7 +149,7 @@ class UberEatsScraper(BaseScraper):
     async def _navigate_to_convenience(self, name: str | None) -> bool:
         """Navigate to Oxxo/convenience on Uber Eats."""
         url = f"{self.BASE_URL}/mx/brand-city/mexico-city-df/oxxo"
-        self.logger.info(f"[uber_eats] Navigating to Oxxo brand page")
+        self.logger.info("[uber_eats] Navigating to Oxxo brand page")
 
         try:
             await self.page.goto(url, wait_until="domcontentloaded")
@@ -164,7 +164,9 @@ class UberEatsScraper(BaseScraper):
             if store_link:
                 href = await store_link.get_attribute("href")
                 if href:
-                    store_url = href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    store_url = (
+                        href if href.startswith("http") else f"{self.BASE_URL}{href}"
+                    )
                     await self.page.goto(store_url, wait_until="domcontentloaded")
                     await self.page.wait_for_timeout(3000)
                     return not await self._check_arkose()
@@ -206,9 +208,7 @@ class UberEatsScraper(BaseScraper):
     # Extraction
     # ------------------------------------------------------------------
 
-    async def extract_items(
-        self, product_names: list[str]
-    ) -> list[ScrapedItem]:
+    async def extract_items(self, product_names: list[str]) -> list[ScrapedItem]:
         """Extract products from Uber Eats DOM."""
         items: list[ScrapedItem] = []
 
@@ -289,9 +289,7 @@ class UberEatsScraper(BaseScraper):
         try:
             body = await self.page.evaluate("() => document.body.innerText || ''")
             # Look for delivery fee pattern
-            fee_match = re.search(
-                r"[Dd]elivery\s*[Ff]ee[:\s]*\$?\s*([\d,.]+)", body
-            )
+            fee_match = re.search(r"[Dd]elivery\s*[Ff]ee[:\s]*\$?\s*([\d,.]+)", body)
             if fee_match:
                 delivery_fee = float(fee_match.group(1).replace(",", "."))
                 delivery_fee_original = fee_match.group(0)
@@ -335,7 +333,8 @@ class UberEatsScraper(BaseScraper):
             if single_match:
                 val = int(single_match.group(1))
                 return TimeEstimate(
-                    min_minutes=val, max_minutes=val,
+                    min_minutes=val,
+                    max_minutes=val,
                     original_text=single_match.group(0),
                 )
         except Exception as e:

@@ -76,7 +76,11 @@ class ReportGenerator:
             pdata = df[df.platform == platform]
             n_dirs = pdata.address_label.nunique()
             n_items = len(pdata)
-            layers = pdata.scrape_layer.value_counts().to_dict() if "scrape_layer" in pdata.columns else {}
+            layers = (
+                pdata.scrape_layer.value_counts().to_dict()
+                if "scrape_layer" in pdata.columns
+                else {}
+            )
             layers_str = ", ".join(f"{k}: {v}" for k, v in layers.items())
             rows.append(
                 f"<tr><td>{platform}</td><td>{n_dirs}</td>"
