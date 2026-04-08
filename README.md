@@ -3,14 +3,14 @@
 Sistema de inteligencia competitiva que compara Rappi, Uber Eats y DiDi Food
 en 25 direcciones de CDMX con 6 productos de referencia.
 
-## Estado actual: MVP 2 — Multi-Platform
+## Estado actual: MVP 3 — Insights + Reporte
 
-- ✅ Rappi: scraping completo (restaurant + convenience)
-- ✅ Uber Eats: scraping con manejo de Arkose anti-bot
-- ⚠️ DiDi Food: parcial (SPA pesada, documentado como limitacion)
-- ✅ 25 direcciones x 3 plataformas x 6 productos
-- ✅ Normalizacion y merge a CSV unificado
-- ✅ 111 tests automatizados
+- ✅ 3 plataformas scrapeadas (Rappi + Uber Eats + DiDi parcial)
+- ✅ 5 insights accionables generados por analisis estadistico
+- ✅ 4 visualizaciones (barras, heatmap, scatter, tabla)
+- ✅ Reporte HTML autocontenido (reports/insights.html)
+- ✅ --report-only para regenerar insights desde datos existentes
+- ✅ 130 tests automatizados
 
 ## Prerrequisitos
 
@@ -128,7 +128,7 @@ pytest tests/test_models.py -v
 pytest tests/ --cov=src --cov-report=html
 ```
 
-Resultado esperado: **111 tests passing**.
+Resultado esperado: **130 tests passing**.
 
 ## Output generado
 
