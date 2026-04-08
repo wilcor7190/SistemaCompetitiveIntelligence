@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+
+# Environment
+.env
+.env.local
+*.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data (large files - keep structure, ignore data)
+data/raw/*.json
+data/merged/*.csv
+data/screenshots/*.png
+!data/raw/.gitkeep
+!data/merged/.gitkeep
+!data/screenshots/.gitkeep
+
+# Reports (generated)
+reports/charts/*.png
+reports/*.html
+!reports/charts/.gitkeep
+
+# Jupyter
+.ipynb_checkpoints/
+notebooks/.ipynb_checkpoints/
+
+# Logs
+logs/
+*.log
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Credentials
+*credentials*
+*secret*
+*api_key*

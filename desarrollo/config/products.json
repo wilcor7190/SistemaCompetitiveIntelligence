@@ -1,0 +1,93 @@
+{
+  "$schema": "Productos de referencia para comparacion entre plataformas",
+  "version": "2.0.0",
+  "store_groups": [
+    {
+      "store_type": "restaurant",
+      "store_name": "McDonald's",
+      "store_aliases": ["mcdonalds", "mcdonald's", "mc donalds", "mcd"],
+      "products": [
+        {
+          "canonical_name": "Big Mac",
+          "aliases": [
+            "big mac", "bigmac", "big mac tocino", "big mac individual",
+            "big mac sola", "big mac clasica", "hamburguesa big mac"
+          ],
+          "category": "fast_food",
+          "expected_price_range": {"min": 89, "max": 180},
+          "notes": "Indice Big Mac es estandar mundial. Spike: $145 Uber, $155 Rappi"
+        },
+        {
+          "canonical_name": "McNuggets 10 pzas",
+          "aliases": [
+            "mcnuggets 10 pzas", "mcnuggets 10 piezas", "10 mcnuggets",
+            "chicken mcnuggets 10", "nuggets 10", "mcnuggets 10", "10 piezas mcnuggets"
+          ],
+          "category": "fast_food",
+          "expected_price_range": {"min": 100, "max": 200},
+          "notes": "Producto simple. Spike: $155 Uber, $145 Rappi (Rappi 6.5% mas barato)"
+        },
+        {
+          "canonical_name": "Combo Mediano",
+          "aliases": [
+            "mctrio mediano", "mctrio", "combo big mac", "mctrio hamb c/queso",
+            "mctrio hamb dbl", "mctrio mediano big mac", "combo mediano big mac",
+            "mctrio mediano big mac tocino", "mctrio hamb c/queso mediano"
+          ],
+          "category": "fast_food",
+          "expected_price_range": {"min": 85, "max": 200},
+          "notes": "Compara bundling y pricing de combos. Spike: McTrio Hamb c/Queso $95 en ambas"
+        }
+      ]
+    },
+    {
+      "store_type": "convenience",
+      "store_name": "Oxxo",
+      "store_aliases": ["oxxo", "7-eleven", "7eleven", "tienda", "conveniencia"],
+      "notes": "Buscar la primera tienda de conveniencia disponible. Oxxo es la mas comun en CDMX. Alternativas: 7-Eleven, Rappi Turbo, Uber Convenience",
+      "products": [
+        {
+          "canonical_name": "Coca-Cola 600ml",
+          "aliases": [
+            "coca-cola 600ml", "coca-cola mediana", "coca cola 600",
+            "refresco coca 600ml", "coca-cola 600", "coca cola mediana",
+            "coca-cola med", "refresco coca-cola", "coca cola original 600"
+          ],
+          "category": "retail",
+          "expected_price_range": {"min": 15, "max": 50},
+          "notes": "Producto commoditizado. Precio en Oxxo fisico ~$18. Delivery markup esperado 30-80%"
+        },
+        {
+          "canonical_name": "Agua Bonafont 1L",
+          "aliases": [
+            "agua bonafont 1l", "bonafont 1l", "bonafont 1 litro",
+            "agua natural 1l", "bonafont 1000ml", "agua bonafont",
+            "bonafont natural 1l", "agua natural bonafont"
+          ],
+          "category": "retail",
+          "expected_price_range": {"min": 10, "max": 40},
+          "notes": "Bajo precio base (~$12 en tienda). Amplifica diferencias en delivery fees"
+        }
+      ]
+    },
+    {
+      "store_type": "pharmacy",
+      "store_name": null,
+      "store_aliases": ["farmacia", "pharmacy", "farmacias del ahorro", "rappi farmacia", "farmacia guadalajara"],
+      "notes": "Buscar en la primera farmacia disponible o en Rappi Turbo/seccion bebes. Si no hay farmacia, buscar en supermercado. MVP 2+ (prescindible si no hay tiempo)",
+      "products": [
+        {
+          "canonical_name": "Panales",
+          "aliases": [
+            "panales", "pañales", "panales huggies", "pañales huggies",
+            "huggies", "panales pampers", "pañales pampers", "pampers",
+            "panales etapa 4", "pañales etapa 4", "panales bebe"
+          ],
+          "category": "pharmacy",
+          "expected_price_range": {"min": 80, "max": 350},
+          "notes": "Producto de farmacia/bebes. Huggies o Pampers paquete mediano (~20 piezas). Brief lo lista explicitamente. Buscar en farmacia o seccion de bebes"
+        }
+      ]
+    }
+  ]
+}

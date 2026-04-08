@@ -1,0 +1,134 @@
+# =============================================================================
+# Settings generales - Sistema de Competitive Intelligence
+# =============================================================================
+
+general:
+  project_name: "Rappi Competitive Intelligence"
+  version: "0.1.0"
+  default_city: "CDMX"
+  default_restaurant: "McDonald's"
+
+# =============================================================================
+# Configuracion de scraping
+# =============================================================================
+scraping:
+  # Orden de plataformas (ADR-001: Rappi primero)
+  platforms:
+    - rappi
+    - uber_eats
+    - didi_food
+
+  # Ejecucion
+  execution_mode: "sequential"       # sequential | parallel_platforms
+  # sequential: 1 plataforma a la vez, todas las direcciones, luego la siguiente
+  # parallel_platforms: 1 browser por plataforma en paralelo (mas rapido, mas RAM)
+
+  # Rate limiting
+  delay_between_requests_min: 3      # segundos
+  delay_between_requests_max: 7      # segundos
+  delay_between_addresses_min: 5     # segundos
+  delay_between_addresses_max: 10    # segundos
+  max_requests_per_minute: 10
+  max_concurrent_browsers: 1         # 1 = secuencial, >1 = paralelo
+
+  # Timeouts
+  page_load_timeout: 30000           # ms - tiempo max para cargar pagina
+  selector_timeout: 10000            # ms - tiempo max para encontrar selector
+  screenshot_timeout: 5000           # ms - tiempo max para capturar screenshot
+  network_idle_timeout: 15000        # ms - tiempo max para networkidle
+
+  # Retries (ver flujo-datos.md seccion 5)
+  max_retries_per_address: 2         # reintentos completos (3 capas)
+  retry_delay: 5                     # segundos entre reintentos
+
+  # Circuit breaker
+  circuit_breaker_window: 10         # ultimas N direcciones
+  circuit_breaker_threshold: 0.6     # 60% fallos = pausar plataforma
+
+# =============================================================================
+# Configuracion de browser (Playwright)
+# =============================================================================
+browser:
+  headless: true
+  stealth: true                      # usar playwright-stealth plugin
+  user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+  viewport:
+    width: 1920
+    height: 1080
+  locale: "es-MX"
+  timezone: "America/Mexico_City"
+  geolocation: true                  # simular ubicacion real con lat/lng de la direccion
+
+# =============================================================================
+# Configuracion de Ollama (modelos locales)
+# =============================================================================
+ollama:
+  base_url: "http://localhost:11434"
+  timeout: 60000                     # ms - timeout para llamadas a Ollama
+
+  models:
+    vision: "qwen3-vl:8b"           # Capa 3: OCR de screenshots
+    text_parser: "qwen3.5:4b"       # Capa 2 fallback: parseo texto roto
+    insights: "qwen3.5:9b"          # Generacion de insights
+    embeddings: "nomic-embed-text"   # Matching de productos
+
+  # Umbrales
+  embedding_similarity_threshold: 0.85   # Para product matching
+  vision_confidence_threshold: 0.7       # Confianza minima OCR
+  max_llm_retries: 2                     # Reintentos si JSON invalido
+
+# =============================================================================
+# Configuracion de proxy (deshabilitado por defecto)
+# =============================================================================
+proxy:
+  enabled: false
+  provider: "scraperapi"             # scraperapi | brightdata | oxylabs
+  api_key_env: "SCRAPER_API_KEY"     # nombre de la env var (NO el valor)
+  country: "MX"
+  rotate: true
+
+# =============================================================================
+# Rutas de datos (relativas a desarrollo/)
+# =============================================================================
+paths:
+  config_dir: "config"
+  addresses_file: "config/addresses.json"
+  products_file: "config/products.json"
+  raw_data: "data/raw"
+  merged_data: "data/merged"
+  screenshots: "data/screenshots"
+  reports: "reports"
+  charts: "reports/charts"
+  logs: "logs"
+
+# =============================================================================
+# Logging
+# =============================================================================
+logging:
+  level: "INFO"                      # DEBUG | INFO | WARNING | ERROR
+  console: true                      # logs en consola con rich
+  file: true                         # logs en archivo
+  file_path: "logs/scraping.log"
+  format: "[{time}] [{level}] [{platform}][{address}] {message}"
+
+# =============================================================================
+# Screenshots
+# =============================================================================
+screenshots:
+  enabled: true                      # capturar screenshots como evidencia
+  on_success: false                  # capturar en exito (ocupa espacio)
+  on_failure: true                   # capturar siempre en fallo (debugging)
+  on_vision_fallback: true           # capturar siempre para Capa 3 (input del OCR)
+  format: "png"
+  # Naming: {platform}_{address_slug}_{YYYYMMDD}_{HHMMSS}.png
+  # Ejemplo: rappi_reforma-222_20260407_143015.png
+
+# =============================================================================
+# Datos pre-scrapeados (backup para demo)
+# =============================================================================
+backup:
+  enabled: true
+  path: "data/backup"                # directorio con JSON pre-scrapeados
+  use_if_scraping_fails: true        # usar backup si el scraping falla completamente
+  # Para generar backup: python -m src.main --save-backup
+  # Para usar backup:    python -m src.main --use-backup

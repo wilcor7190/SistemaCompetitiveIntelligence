@@ -1,0 +1,207 @@
+{
+  "$schema": "Direcciones de entrega para scraping - 25 direcciones en 5 clusters de CDMX",
+  "version": "1.0.0",
+  "default_city": "CDMX",
+  "addresses": [
+    {
+      "label": "Reforma 222 - Centro Historico",
+      "lat": 19.4326,
+      "lng": -99.1332,
+      "zone_type": "centro",
+      "city": "CDMX",
+      "full_address": "Paseo de la Reforma 222, Juarez, Cuauhtemoc, 06600 Ciudad de Mexico"
+    },
+    {
+      "label": "Zocalo - Centro Historico",
+      "lat": 19.4326,
+      "lng": -99.1332,
+      "zone_type": "centro",
+      "city": "CDMX",
+      "full_address": "Plaza de la Constitucion S/N, Centro Historico, 06000 Ciudad de Mexico"
+    },
+    {
+      "label": "Zona Rosa - Cuauhtemoc",
+      "lat": 19.4270,
+      "lng": -99.1577,
+      "zone_type": "centro",
+      "city": "CDMX",
+      "full_address": "Calle Genova 44, Zona Rosa, Juarez, 06600 Ciudad de Mexico"
+    },
+    {
+      "label": "Bellas Artes - Centro",
+      "lat": 19.4352,
+      "lng": -99.1412,
+      "zone_type": "centro",
+      "city": "CDMX",
+      "full_address": "Av. Juarez 1, Centro Historico, 06050 Ciudad de Mexico"
+    },
+    {
+      "label": "Roma Norte - Cuauhtemoc",
+      "lat": 19.4195,
+      "lng": -99.1625,
+      "zone_type": "centro",
+      "city": "CDMX",
+      "full_address": "Calle Orizaba 101, Roma Norte, Cuauhtemoc, 06700 Ciudad de Mexico"
+    },
+    {
+      "label": "Polanco - Masaryk",
+      "lat": 19.4340,
+      "lng": -99.1956,
+      "zone_type": "premium",
+      "city": "CDMX",
+      "full_address": "Av. Presidente Masaryk 360, Polanco V Seccion, 11560 Ciudad de Mexico"
+    },
+    {
+      "label": "Polanco - Moliere",
+      "lat": 19.4365,
+      "lng": -99.1980,
+      "zone_type": "premium",
+      "city": "CDMX",
+      "full_address": "Calle Moliere 222, Polanco IV Seccion, 11550 Ciudad de Mexico"
+    },
+    {
+      "label": "Lomas de Chapultepec",
+      "lat": 19.4220,
+      "lng": -99.2100,
+      "zone_type": "premium",
+      "city": "CDMX",
+      "full_address": "Paseo de las Palmas 820, Lomas de Chapultepec, 11000 Ciudad de Mexico"
+    },
+    {
+      "label": "Condesa - Tamaulipas",
+      "lat": 19.4115,
+      "lng": -99.1730,
+      "zone_type": "premium",
+      "city": "CDMX",
+      "full_address": "Av. Tamaulipas 100, Condesa, Cuauhtemoc, 06140 Ciudad de Mexico"
+    },
+    {
+      "label": "Interlomas - Huixquilucan",
+      "lat": 19.3960,
+      "lng": -99.2830,
+      "zone_type": "premium",
+      "city": "CDMX",
+      "full_address": "Boulevard Magnocentro 5, Interlomas, 52760 Huixquilucan"
+    },
+    {
+      "label": "Coyoacan - Centro",
+      "lat": 19.3467,
+      "lng": -99.1617,
+      "zone_type": "residencial",
+      "city": "CDMX",
+      "full_address": "Av. Universidad 1900, Oxtopulco Universidad, Coyoacan, 04310 Ciudad de Mexico"
+    },
+    {
+      "label": "Del Valle - Insurgentes",
+      "lat": 19.3830,
+      "lng": -99.1720,
+      "zone_type": "residencial",
+      "city": "CDMX",
+      "full_address": "Av. Insurgentes Sur 1235, Del Valle Centro, Benito Juarez, 03100 Ciudad de Mexico"
+    },
+    {
+      "label": "Narvarte - Diagonal San Antonio",
+      "lat": 19.3885,
+      "lng": -99.1560,
+      "zone_type": "residencial",
+      "city": "CDMX",
+      "full_address": "Diagonal San Antonio 1005, Narvarte Poniente, Benito Juarez, 03020 Ciudad de Mexico"
+    },
+    {
+      "label": "Tlalpan - Perisur",
+      "lat": 19.3030,
+      "lng": -99.1900,
+      "zone_type": "residencial",
+      "city": "CDMX",
+      "full_address": "Periferico Sur 4690, Jardines del Pedregal, Tlalpan, 14010 Ciudad de Mexico"
+    },
+    {
+      "label": "San Angel - Altavista",
+      "lat": 19.3470,
+      "lng": -99.1920,
+      "zone_type": "residencial",
+      "city": "CDMX",
+      "full_address": "Av. Altavista 147, San Angel, Alvaro Obregon, 01000 Ciudad de Mexico"
+    },
+    {
+      "label": "Iztapalapa - Ermita",
+      "lat": 19.3586,
+      "lng": -99.0575,
+      "zone_type": "periferia",
+      "city": "CDMX",
+      "full_address": "Calzada Ermita Iztapalapa 2100, Iztapalapa, 09300 Ciudad de Mexico"
+    },
+    {
+      "label": "Ecatepec - Via Morelos",
+      "lat": 19.6010,
+      "lng": -99.0500,
+      "zone_type": "periferia",
+      "city": "CDMX",
+      "full_address": "Via Morelos 345, Ecatepec de Morelos, 55000 Estado de Mexico"
+    },
+    {
+      "label": "Nezahualcoyotl - Pantitlan",
+      "lat": 19.4150,
+      "lng": -99.0400,
+      "zone_type": "periferia",
+      "city": "CDMX",
+      "full_address": "Av. Pantitlan 521, Ciudad Nezahualcoyotl, 57000 Estado de Mexico"
+    },
+    {
+      "label": "Tlahuac - Centro",
+      "lat": 19.2860,
+      "lng": -99.0050,
+      "zone_type": "periferia",
+      "city": "CDMX",
+      "full_address": "Av. Tlahuac 5765, San Lorenzo Tezonco, Tlahuac, 13300 Ciudad de Mexico"
+    },
+    {
+      "label": "Gustavo A. Madero - Indios Verdes",
+      "lat": 19.4960,
+      "lng": -99.1190,
+      "zone_type": "periferia",
+      "city": "CDMX",
+      "full_address": "Av. Insurgentes Norte 1500, Gustavo A. Madero, 07300 Ciudad de Mexico"
+    },
+    {
+      "label": "Santa Fe - Centro Comercial",
+      "lat": 19.3663,
+      "lng": -99.2586,
+      "zone_type": "corporativo",
+      "city": "CDMX",
+      "full_address": "Av. Vasco de Quiroga 3800, Santa Fe, Cuajimalpa, 05348 Ciudad de Mexico"
+    },
+    {
+      "label": "Santa Fe - Corporativo",
+      "lat": 19.3590,
+      "lng": -99.2620,
+      "zone_type": "corporativo",
+      "city": "CDMX",
+      "full_address": "Av. Santa Fe 440, Santa Fe, Cuajimalpa, 05348 Ciudad de Mexico"
+    },
+    {
+      "label": "Insurgentes Sur - WTC",
+      "lat": 19.3935,
+      "lng": -99.1770,
+      "zone_type": "corporativo",
+      "city": "CDMX",
+      "full_address": "Av. de los Insurgentes Sur 605, Napoles, Benito Juarez, 03810 Ciudad de Mexico"
+    },
+    {
+      "label": "Paseo de la Reforma - Torre Mayor",
+      "lat": 19.4275,
+      "lng": -99.1680,
+      "zone_type": "corporativo",
+      "city": "CDMX",
+      "full_address": "Paseo de la Reforma 505, Cuauhtemoc, 06500 Ciudad de Mexico"
+    },
+    {
+      "label": "Perifico Sur - Corporativo Sur",
+      "lat": 19.3290,
+      "lng": -99.2020,
+      "zone_type": "corporativo",
+      "city": "CDMX",
+      "full_address": "Periferico Sur 3395, San Jeronimo Lidice, Magdalena Contreras, 10200 Ciudad de Mexico"
+    }
+  ]
+}
