@@ -201,8 +201,8 @@ El evaluador probablemente preguntara sobre:
 | **Produccion** | Como se escalaria, monitoreo, alertas |
 | **Costo** | Cuanto cuesta correr el sistema, presupuesto Claude API |
 
-> **Nota:** El guion personal con respuestas detalladas a estas preguntas
-> esta en [`guion-presentacion.md`](guion-presentacion.md).
+> **Nota:** El presentador debe preparar respuestas detalladas a estos
+> topicos basandose en los ADRs documentados en `diseno/decisiones/`.
 
 ---
 
@@ -224,7 +224,6 @@ Despues de la presentacion, el evaluador deberia haber visto:
 
 | Documento | Proposito |
 |-----------|-----------|
-| [`guion-presentacion.md`](guion-presentacion.md) | Guion personal con scripts literales y respuestas Q&A |
 | [`checklists/pre-demo.md`](checklists/pre-demo.md) | Checklist del dia de la presentacion |
 | [`checklists/pre-entrega.md`](checklists/pre-entrega.md) | Checklist pre-entrega |
 | [`reportes/auditoria-tecnica-mvp4.md`](reportes/auditoria-tecnica-mvp4.md) | Auditoria tecnica completa |
