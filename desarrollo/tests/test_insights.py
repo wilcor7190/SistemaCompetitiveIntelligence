@@ -95,18 +95,25 @@ class TestInsightToHtml:
 
 
 class TestExecutiveSummary:
-    @pytest.mark.asyncio
-    async def test_summary_not_empty(self, sample_df):
-        """Executive summary is not empty."""
+    def test_template_summary_not_empty(self, sample_df):
+        """Template-based executive summary is not empty."""
         gen = InsightGenerator()
-        insights = await gen.generate_insights(sample_df)
-        summary = gen.generate_executive_summary(sample_df, insights)
+        # Build minimal insights to avoid running full pipeline
+        from src.analysis.insights import Insight
+
+        insights = [
+            Insight(1, "Test", "Posicionamiento de Precios", "f", "i", "r"),
+        ]
+        summary = gen._template_executive_summary(sample_df, insights)
         assert len(summary) > 20
 
-    @pytest.mark.asyncio
-    async def test_summary_mentions_platforms(self, sample_df):
-        """Summary mentions number of platforms."""
+    def test_template_summary_mentions_platforms(self, sample_df):
+        """Template summary mentions number of platforms."""
         gen = InsightGenerator()
-        insights = await gen.generate_insights(sample_df)
-        summary = gen.generate_executive_summary(sample_df, insights)
+        from src.analysis.insights import Insight
+
+        insights = [
+            Insight(1, "Test", "Posicionamiento de Precios", "f", "i", "r"),
+        ]
+        summary = gen._template_executive_summary(sample_df, insights)
         assert "2 plataformas" in summary
