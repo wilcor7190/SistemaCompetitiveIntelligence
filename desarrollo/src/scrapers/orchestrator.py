@@ -20,7 +20,9 @@ from src.processors.normalizer import DataNormalizer
 from src.processors.product_matcher import ProductMatcher
 from src.processors.validator import DataValidator
 from src.scrapers.base import BaseScraper
+from src.scrapers.didi_food import DiDiFoodScraper
 from src.scrapers.rappi import RappiScraper
+from src.scrapers.uber_eats import UberEatsScraper
 from src.utils.logger import get_logger
 from src.utils.ollama_client import OllamaClient
 
@@ -41,7 +43,11 @@ class ScrapingOrchestrator:
         """Factory: create the right scraper for a platform."""
         if platform == Platform.RAPPI:
             return RappiScraper(self.scraper_config)
-        self.logger.warning(f"{platform.value} not implemented yet, skipping")
+        if platform == Platform.UBER_EATS:
+            return UberEatsScraper(self.scraper_config)
+        if platform == Platform.DIDI_FOOD:
+            return DiDiFoodScraper(self.scraper_config)
+        self.logger.warning(f"{platform.value} not implemented, skipping")
         return None
 
     async def run_all(
