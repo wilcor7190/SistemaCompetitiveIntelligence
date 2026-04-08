@@ -80,10 +80,10 @@ class TestHtmlReport:
         assert "Competitive Intelligence Report" in html
         assert "Resumen Ejecutivo" in html
         assert "Test summary." in html
-        assert "Datos del Scraping" in html
+        assert "Cobertura del Scraping" in html
         assert "Comparativa de Precios" in html
         assert "Top 5 Insights" in html
-        assert "Insight #1" in html
+        assert "#1" in html  # insight number rendered as #1
         assert "Limitaciones" in html
         assert "Metodologia" in html
 

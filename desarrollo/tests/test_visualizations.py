@@ -24,6 +24,7 @@ def sample_df():
         "canonical_product": ["Big Mac", "Big Mac", "Big Mac", "Big Mac"],
         "price_mxn": [155.0, 160.0, 145.0, 150.0],
         "delivery_fee_mxn": [0.0, 0.0, 4.99, 4.99],
+        "delivery_time_min": [35, 35, 25, 30],
         "delivery_time_max": [35, 35, 35, 40],
         "scrape_layer": ["dom"] * 4,
     })
