@@ -158,47 +158,97 @@ async def run(args: argparse.Namespace) -> int:
             "Ollama not available. Layers 2-fallback and 3 disabled."
         )
 
-    # Run orchestrator
-    orchestrator = ScrapingOrchestrator(config)
+    paths = config.get_paths()
+    csv_path = None
 
-    run_result = await orchestrator.run_all(
-        platforms=platforms,
-        addresses=addresses,
-        store_groups=active_groups,
-    )
+    # --report-only: skip scraping, use existing CSV
+    if args.report_only:
+        csv_path = args.report_data
+        if not Path(csv_path).exists():
+            logger.error(f"CSV not found: {csv_path}")
+            return 1
+        logger.info(f"Report-only mode: using {csv_path}")
+    else:
+        # Run orchestrator
+        orchestrator = ScrapingOrchestrator(config)
 
-    # Normalize and merge to CSV
-    if run_result.results:
-        paths = config.get_paths()
-        csv_path = await orchestrator.normalize_and_merge(
-            run_result, output_dir=paths["merged_data"]
+        run_result = await orchestrator.run_all(
+            platforms=platforms,
+            addresses=addresses,
+            store_groups=active_groups,
         )
-        logger.info(f"CSV saved: {csv_path}")
 
-        # Save backup if requested
-        if args.save_backup:
-            backup_dir = Path("data/backup")
-            backup_dir.mkdir(parents=True, exist_ok=True)
-            ts = time.strftime("%Y%m%d_%H%M%S")
+        # Normalize and merge to CSV
+        if run_result.results:
+            csv_path = await orchestrator.normalize_and_merge(
+                run_result, output_dir=paths["merged_data"]
+            )
+            logger.info(f"CSV saved: {csv_path}")
 
-            # Copy raw JSONs
-            raw_dir = Path(paths["raw_data"])
-            for f in raw_dir.glob("*.json"):
-                shutil.copy2(f, backup_dir / f"backup_{ts}_{f.name}")
+            # Save backup if requested
+            if args.save_backup:
+                backup_dir = Path("data/backup")
+                backup_dir.mkdir(parents=True, exist_ok=True)
+                ts = time.strftime("%Y%m%d_%H%M%S")
 
-            # Copy CSV
-            shutil.copy2(csv_path, backup_dir / f"comparison_backup_{ts}.csv")
-            logger.info(f"Backup saved to {backup_dir}")
+                raw_dir = Path(paths["raw_data"])
+                for f in raw_dir.glob("*.json"):
+                    shutil.copy2(f, backup_dir / f"backup_{ts}_{f.name}")
+                shutil.copy2(csv_path, backup_dir / f"comparison_backup_{ts}.csv")
+                logger.info(f"Backup saved to {backup_dir}")
 
-    # Print summary
-    success = sum(1 for r in run_result.results if r.success)
-    total = len(run_result.results)
-    logger.info(
-        f"Done: {success}/{total} successful ({run_result.success_rate:.0%}) | "
-        f"Layers: {run_result.layer_distribution}"
+        # Print scraping summary
+        success = sum(1 for r in run_result.results if r.success)
+        total = len(run_result.results)
+        logger.info(
+            f"Scraping done: {success}/{total} successful "
+            f"({run_result.success_rate:.0%}) | Layers: {run_result.layer_distribution}"
+        )
+
+    # Generate insights and report
+    if csv_path and Path(csv_path).exists():
+        await _generate_report(csv_path, paths, logger)
+
+    return 0
+
+
+async def _generate_report(csv_path: str, paths: dict, logger) -> None:
+    """Generate charts, insights, and HTML report from CSV."""
+    import pandas as pd
+
+    from src.analysis.insights import InsightGenerator
+    from src.analysis.report_generator import ReportGenerator
+    from src.analysis.visualizations import generate_all_charts
+
+    df = pd.read_csv(csv_path)
+    if df.empty:
+        logger.warning("CSV is empty, skipping report generation")
+        return
+
+    logger.info(f"Generating report from {len(df)} rows...")
+
+    # Charts
+    charts_dir = paths.get("charts", "reports/charts")
+    chart_paths = generate_all_charts(df, output_dir=charts_dir)
+    logger.info(f"Charts generated: {list(chart_paths.keys())}")
+
+    # Insights
+    generator = InsightGenerator()
+    insights = await generator.generate_insights(df)
+    executive_summary = generator.generate_executive_summary(df, insights)
+    logger.info(f"Insights generated: {len(insights)}")
+
+    # HTML Report
+    report = ReportGenerator()
+    report_path = paths.get("reports", "reports") + "/insights.html"
+    report.generate(
+        df=df,
+        insights=insights,
+        executive_summary=executive_summary,
+        chart_paths=chart_paths,
+        output_path=report_path,
     )
-
-    return 0 if success > 0 else 3
+    logger.info(f"Report: {report_path}")
 
 
 def main() -> None:
