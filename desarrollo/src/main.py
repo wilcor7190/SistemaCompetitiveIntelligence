@@ -206,13 +206,11 @@ async def run(args: argparse.Namespace) -> int:
                 shutil.copy2(csv_path, backup_dir / f"comparison_backup_{ts}.csv")
                 logger.info(f"Backup saved to {backup_dir}")
 
-        # Print scraping summary
-        success = sum(1 for r in run_result.results if r.success)
-        total = len(run_result.results)
-        logger.info(
-            f"Scraping done: {success}/{total} successful "
-            f"({run_result.success_rate:.0%}) | Layers: {run_result.layer_distribution}"
-        )
+        # Detailed run summary (observability)
+        from src.utils.run_summary import print_run_summary, save_run_summary
+
+        print_run_summary(run_result)
+        save_run_summary(run_result, output_dir="logs")
 
     # Generate insights and report
     if csv_path and Path(csv_path).exists():
