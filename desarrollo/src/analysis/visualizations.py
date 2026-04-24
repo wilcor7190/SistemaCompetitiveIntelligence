@@ -218,10 +218,16 @@ def chart_zone_heatmap(df: pd.DataFrame, output_path: str) -> str:
             _save_empty_chart(output_path, "Sin datos suficientes")
             return output_path
 
+        # Format annotations with $ prefix (fmt='$.0f' is NOT a valid Python
+        # format specifier — build annotation strings manually).
+        annot_labels = pivot.map(
+            lambda v: f"${v:.0f}" if pd.notna(v) else ""
+        )
+
         sns.heatmap(
             pivot,
-            annot=True,
-            fmt="$.0f",
+            annot=annot_labels,
+            fmt="",  # empty fmt because annotations are already strings
             cmap="YlOrRd",
             ax=ax,
             cbar_kws={"label": "Precio (MXN)"},
